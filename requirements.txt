@@ -1,0 +1,9 @@
+clang-format
+cmake
+cpplint
+numpy
+pre-commit
+pylint
+ray[default]
+twine
+wheel
