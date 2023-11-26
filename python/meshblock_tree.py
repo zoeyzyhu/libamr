@@ -1,4 +1,4 @@
-# pylint: disable = import-error, too-many-arguments, too-many-locals, redefined-outer-name, too-many-boolean-expressions, too-many-branches, undefined-variable
+# pylint: disable = import-error, too-many-arguments, too-many-locals, redefined-outer-name, too-many-boolean-expressions,too-many-branches,undefined-variable, fixme
 """MeshBlockTree class and related functions."""
 
 from math import floor, log2
@@ -95,7 +95,7 @@ class MeshBlockTree:
 
         return MeshBlockTree(rs, lx1, lx2, lx3, self)
 
-    def generate_leaf_refine(self, ox1: int = 0, ox2: int = 0, ox3: int = 0) -> Optional[Self]:
+    def generate_leaf_refine(self, ox1: int = 0, ox2: int = 0, ox3: int = 0) -> Self:
         """Generate a leaf block with refinement."""
         nx1 = self.size.nx1
         dx1 = (self.size.x1max - self.size.x1min) / (2. * nx1)
@@ -172,13 +172,14 @@ class MeshBlockTree:
             self.leaf = []
 
     def merge_blocks(self):
-        """Merge the block into a parent block."""
+        """Merge children blocks into a parent block."""
 
     def find_node(self, mblock: MeshBlock) -> Optional[Self]:
         """Find the node that contains the mesh block."""
 
+    # TODO: implement this
     def find_neighbors(self, offset: (int, int, int)) -> [Self]:
-        """Find the neighbors of the block."""
+        """Find neighbors of the block."""
         # 0, 1, 2, 3 represent left, right, up, down, if it is on board, return None
 
     def get_leaf(self, ox1: int, ox2: int = 0, ox3: int = 0) -> Optional[Self]:
