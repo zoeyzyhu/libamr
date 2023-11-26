@@ -1,10 +1,10 @@
-#ifndef SRC_MESHLIB_HPP_ 
+#ifndef SRC_MESHLIB_HPP_
 #define SRC_MESHLIB_HPP_
 
 // C/C++
-#include <vector>
 #include <array>
 #include <memory>
+#include <vector>
 
 using Real = double;
 
@@ -17,9 +17,7 @@ using Real = double;
 /// x1f(i-2)--+--x1f(i-1)--+--x1f(i)---+--x2f(i+i)--+--x1f(i+2)--+--x1f(i+3)
 /// ----|-----+------|-----+------|----+------|-----+------|-----+------|---
 
-enum {
-  NGHOST = 3
-};
+enum { NGHOST = 3 };
 
 using GridPositionIndicator = std::array<int, 3>;
 
@@ -30,12 +28,12 @@ class Coordinate {
 
   //! \todo implement constructor
   //! \param[in] pmb pointer to a mesh block
-  Coordinate(MeshBlock const *pmb);
+  explicit Coordinate(MeshBlock const *pmb);
 
   //! virtual destructor (tobe inherited)
   virtual ~Coordinate();
 
-  //! cell center coordinats
+  //! cell center coordinates
   std::vector<Real> x1v, x2v, x3v;
 
   //! cell face coordinates
@@ -47,30 +45,30 @@ using CoordinatePtr = std::shared_ptr<Coordinate>;
 //! \brief A MeshBlock is a collection of cells
 class MeshBlock {
  public:  // public data
-   //! pointer to a coordinate object
-   CoordinatePtr coord;
-   
-   //! opaque class
-   class Phy;
+  //! pointer to a coordinate object
+  CoordinatePtr coord;
 
-   //! opaque pointer to implement physics
-   std::shared_ptr<Phy> phy;
+  //! opaque class
+  class Phy;
+
+  //! opaque pointer to implement physics
+  std::shared_ptr<Phy> phy;
 
  public:
-   //! \todo implement default constructor
-   MeshBlock();
+  //! \todo implement default constructor
+  MeshBlock();
 
-   //! \todo implement constructor
-   //! \param[in] nx1 number of internal cells in x1 direction
-   //! \param[in] nx2 number of internal cells in x2 direction
-   //! \param[in] nx3 number of internal cells in x3 direction
-   MeshBlock(int nx1, int nx2, int nx3);
+  //! \todo implement constructor
+  //! \param[in] nx1 number of internal cells in x1 direction
+  //! \param[in] nx2 number of internal cells in x2 direction
+  //! \param[in] nx3 number of internal cells in x3 direction
+  MeshBlock(int nx1, int nx2, int nx3);
 
-   //! number of cells in each direction
-   int nc1, nc2, nc3;
+  //! number of cells in each direction
+  int nc1, nc2, nc3;
 
-   //! start and end indices of the direction
-   int is, ie, js, je, ks, ke;
+  //! start and end indices of the direction
+  int is, ie, js, je, ks, ke;
 };
 
 using MeshBlockPtr = std::shared_ptr<MeshBlock>;

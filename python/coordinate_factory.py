@@ -1,9 +1,16 @@
+# pylint: disable = import-error, too-few-public-methods
+"""Module containing the CoordinateFactory class."""
+
 from region_size import RegionSize
 from coordinates import Cartesian, Cylindrical
 
+
 class CoordinateFactory:
+    """A factory class for creating coordinate objects."""
+
     @staticmethod
     def create(size: RegionSize, coordinate_type: str, nghost: int = 0):
+        """Create a coordinate object based on the specified type."""
         if coordinate_type == "cartesian":
             coord = Cartesian(size, nghost)
         elif coordinate_type == "cylindrical":
