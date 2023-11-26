@@ -1,4 +1,4 @@
-# pylint: disable = import-error, too-many-instance-attributes, too-many-branches, too-many-statements
+# pylint: disable = import-error, too-many-instance-attributes, too-many-branches, too-many-statements, fixme
 """Module containing the MeshBlock class."""
 
 from typing import Any
@@ -168,6 +168,16 @@ class MeshBlock:
                     print()
                 if k < self.nc3 - 1:
                     print()
+
+    # TODO: implement prolongation
+    def prolongated_view(self, offset: (int, int, int),
+                         ox1: int, ox2: int, ox3: int) -> np.ndarray:
+        """Prolongate a view to a finer mesh block."""
+
+    # TODO: implement restriction
+    def restrict_view(self, offset: (int, int, int),
+                      ox1: int, ox2: int, ox3: int) -> np.ndarray:
+        """Restrict a view to a coarser mesh block."""
 
     def __str__(self) -> str:
         """Return a string representation of the mesh block."""

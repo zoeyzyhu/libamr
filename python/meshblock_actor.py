@@ -35,19 +35,20 @@ class MeshBlockActor:
         self.tree_node = tree.find_node(mblock)
         self.neighbor_object = ray.put(self.mblock)
 
-    def get_view(self, offset: (int, int, int), lx1: int = 0,
-                 lx2: int = 0, lx3: int = 0, method: str = "") -> np.ndarray:
+    def get_view(self, offset: (int, int, int), ox1: int = 0,
+                 ox2: int = 0, ox3: int = 0, method: str = "") -> np.ndarray:
         """Get a view of the mesh block with optional prolongation or restriction."""
         # prolongation and restriction go here
         if method == 'prolongation':
-            return self.mblock.prolongated_view(view, offset, logicloc)
+            return self.mblock.prolongated_view(offset, ox1, ox2, ox3)
         if method == 'restriction':
-            return self.mblock.restricted_view(view, offset, logicloc)
+            return self.mblock.restricted_view(offset, ox1, ox2, ox3)
         return self.mblock.view[offset]
 
     def update_ghost(self, offset: (int, int, int)) -> None:
         """Update ghost cells based on neighboring blocks."""
         neighbors = ray.get(self.neighbor_object)[offset]
+
         if len(neighbors) > 1:  # neighbors at finer level
             tasks = [neighbor.get_view.remote(-offset, neighbor.lx1, neighbor.lx2,
                                               neighbor.lx3, "prolongation")
