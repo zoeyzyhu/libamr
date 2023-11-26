@@ -150,8 +150,9 @@ class MeshBlock:
         # set ghost zones to zero
         self.data[:] = -np.ones(self.data.shape)
         np.random.seed(seed)
-        self.ghost[(0, 0, 0)][:] = np.random.uniform(0, 1,
-                                                     size=(self.nx3, self.nx2, self.nx1, self.nvar))
+        self.ghost[(0, 0, 0)][:] = \
+            np.random.uniform(0, 1, size=(
+                self.nx3, self.nx2, self.nx1, self.nvar))
 
         return self
 
