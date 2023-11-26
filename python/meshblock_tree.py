@@ -218,26 +218,9 @@ if __name__ == "__main__":
     rs = RegionSize(x1dim=(0, 120., 8), x2dim=(0, 120., 4))
     root = MeshBlockTree(rs)
     root.create_tree()
+    root.print_tree()
 
-    print(root)
-
-    print(root.leaf[0])
-    print(root.leaf[0].leaf[0])
-    print(root.leaf[0].leaf[1])
-
-    print(root.leaf[1])
-    print(root.leaf[1].leaf[0])
-    print(root.leaf[1].leaf[1])
-
-    print(root.leaf[2])
-    print(root.leaf[2].leaf[0])
-    print(root.leaf[2].leaf[1])
-
-    print(root.leaf[3])
-    print(root.leaf[3].leaf[0])
-    print(root.leaf[3].leaf[1])
-
-    print("===== split block =====")
+    print("\n\n===== split block =====")
     root.leaf[3].leaf[1].split_block()
     print(root.leaf[3].leaf[1])
     print(root.leaf[3].leaf[1].leaf[0])

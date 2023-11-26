@@ -159,7 +159,7 @@ class MeshBlock:
     def print_data(self) -> None:
         """Print the data in the mesh block."""
         for n in range(self.nvar):
-            print(f"var {n} = ")
+            print(f"\nvar {n} = ")
             for k in range(self.nc3):
                 print(f"(z = {self.coord.x3v[k]:.2f})")
                 for j in range(self.nc2):

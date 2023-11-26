@@ -1,14 +1,14 @@
-# pylint: disable = import-error, too-many-arguments, undefined-variable, unused-argument
+# pylint: disable = import-error, too-many-arguments, undefined-variable, unused-argument, redefined-outer-name, too-few-public-methods, no-member, pointless-string-statement
 """Module containing MeshBlockActor class and related functions."""
 
-from meshblock import MeshBlock
-from meshblock_tree import MeshBlockTree
-from region_size import RegionSize  # Assuming RegionSize is a module you're using
 import numpy as np
 import ray
+from region_size import RegionSize
+from meshblock import MeshBlock
+from meshblock_tree import MeshBlockTree
 
 
-@ray.remote
+# @ray.remote
 def put_neighbors_info(node: MeshBlockTree) -> None:
     """Put the neighbor information of a node into the object store."""
     neighbor_info = {}
@@ -25,9 +25,9 @@ def put_neighbors_info(node: MeshBlockTree) -> None:
     return neighbor_object
 
 
-@ray.remote
+# @ray.remote
 class MeshBlockActor:
-    """A class for the actor of a mesh block."""
+    """Remotely launch actors as mesh blocks."""
 
     def __init__(self, mblock: MeshBlock, tree: MeshBlockTree):
         """Initialize MeshBlockActor with a mesh block and its corresponding tree."""
@@ -71,18 +71,46 @@ class MeshBlockActor:
             tasks = remain_tasks
 
 
-if __name__ == '__main__':
-    ray.init()
+@ray.remote
+class BlockActor:
+    """Remotely launch actors as mesh blocks."""
 
+    def __init__(self, rs: RegionSize, tree: MeshBlockTree):
+        """Initialize MeshBlockActor with a mesh block and its corresponding tree."""
+        self.mb = MeshBlock(rs, "cartesian", nghost=1)
+
+    def print_block(self):
+        """Print the mesh block."""
+        self.mb.print_data()
+
+
+if __name__ == '__main__':
+    # ray.init()
+    """
+    # Test local mesh block
     MeshBlockTree.set_block_size(nx1=2, nx2=2, nx3=1)
-    rs = RegionSize(x1dim=(0, 120., 8), x2dim=(0, 120., 4))
+    rs = RegionSize(x1dim=(0, 120., 4), x2dim=(0, 120., 4))
     root = MeshBlockTree(rs)
     root.create_tree()
+    root.print_tree()
 
-    mesh_block = MeshBlock()
-    mesh_block_actor = MeshBlockActor.remote(mesh_block)
+    mb = MeshBlock(rs, "cartesian", nghost=1)
+    mb.allocate().fill_random()
+    mb.print_data()
+    """
+    # Test remote mesh block
+    MeshBlockTree.set_block_size(nx1=2, nx2=2, nx3=1)
+    rs = RegionSize(x1dim=(0, 120., 4), x2dim=(0, 120., 4))
+    root = MeshBlockTree(rs)
+    root.create_tree()
+    actors = [BlockActor.remote(rs, root) for _ in range(2)]
+    for actor in actors:
+        actor.print_block.remote()
 
-    mesh_block_actor.get_view.remote((0, 0, 0))
-    mesh_block_actor.update_ghost.remote((0, 0, 0))
+    #mesh_block = MeshBlock()
+    #mesh_block_actor = MeshBlockActor.remote(mesh_block)
 
-    ray.shutdown()
+    #mesh_block_actor.get_view.remote((0, 0, 0))
+    #mesh_block_actor.update_ghost.remote((0, 0, 0))
+
+    # ray.shutdown()
