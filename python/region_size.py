@@ -3,7 +3,7 @@
 
 
 class RegionSize:
-    """A class for representing the size of a region."""
+    """A class for representing the size of a multidimensional block."""
 
     def __init__(self, x1dim: (float, float, int),
                  x2dim: (float, float, int) = (-0.5, 0.5, 1),
@@ -54,12 +54,19 @@ class RegionSize:
 
 
 if __name__ == "__main__":
-    region_size = RegionSize((0, 1, 2))
-    print(region_size)
+    region_size1 = RegionSize((0, 1, 2))
+    print(region_size1)
 
-    region_size = RegionSize((0, 1, 2), (0, 1, 2))
-    print(region_size)
+    region_size2 = RegionSize((0, 1, 2), (0, 1, 2))
+    print(region_size2)
 
-    region_size = RegionSize(
+    region_size3 = RegionSize(
+        x1dim=(0, 1, 2), x2dim=(0, 1, 2), x3dim=(-2, 3, 3))
+    print(region_size3)
+
+    region_size4 = RegionSize(
         x1dim=(0, 1, 2), x3dim=(-2, 3, 3), x2dim=(0, 1, 2))
-    print(region_size)
+    print(region_size4)
+
+    print(region_size2 == region_size3)
+    print(region_size4 == region_size3)

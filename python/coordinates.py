@@ -15,8 +15,6 @@ x1f(i-2)--+--x1f(i-1)--+--x1f(i)---+--x1f(i+i)--+--x1f(i+2)--+--x1f(i+3)
 ----|-----+------|-----+------|----+------|-----+------|-----+------|---
 """
 
-# Base coordinate class
-
 
 class Coordinates:
     """Base class for coordinate representation."""
@@ -28,7 +26,7 @@ class Coordinates:
         dx1 = (rs.x1max - rs.x1min) / rs.nx1
         x1min = rs.x1min - nghost * dx1
         x1max = rs.x1max + nghost * dx1
-        self.x1f = np.linspace(x1min, x1max, rs.nx1 + 1 + 2 * nghost)
+        self.x1f = np.linspace(x1min, x1max, num=rs.nx1 + 1 + 2 * nghost)
 
         if rs.nx2 == 1:
             nghost = 0
@@ -37,7 +35,7 @@ class Coordinates:
         dx2 = (rs.x2max - rs.x2min) / rs.nx2
         x2min = rs.x2min - nghost * dx2
         x2max = rs.x2max + nghost * dx2
-        self.x2f = np.linspace(x2min, x2max, rs.nx2 + 1 + 2 * nghost)
+        self.x2f = np.linspace(x2min, x2max, num=rs.nx2 + 1 + 2 * nghost)
 
         if rs.nx3 == 1:
             nghost = 0
@@ -46,11 +44,17 @@ class Coordinates:
         dx3 = (rs.x3max - rs.x3min) / rs.nx3
         x3min = rs.x3min - nghost * dx3
         x3max = rs.x3max + nghost * dx3
-        self.x3f = np.linspace(x3min, x3max, rs.nx3 + 1 + 2 * nghost)
+        self.x3f = np.linspace(x3min, x3max, num=rs.nx3 + 1 + 2 * nghost)
 
     def __str__(self) -> str:
         """Return a string representation of the coordinates."""
-        return f"x1f={self.x1f}\nx2f={self.x2f}\nx3f={self.x3f}\nnghost={self.nghost}"
+        mystr = "Coordinates:\n"
+        x1f_str = " ".join(f"{x:.2f}" for x in self.x1f)
+        x2f_str = " ".join(f"{x:.2f}" for x in self.x2f)
+        x3f_str = " ".join(f"{x:.2f}" for x in self.x3f)
+        mystr += f"x1f=[{x1f_str}]\nx2f=[{x2f_str}]\nx3f=[{x3f_str}]\n" + \
+                 f"nghost={self.nghost}"
+        return mystr
 
     def __eq__(self, other) -> bool:
         """Check if two Coordinates instances are equal."""
@@ -58,8 +62,6 @@ class Coordinates:
             return self.x1f == other.x1f and self.x2f == other.x2f and \
                 self.x3f == other.x3f and self.nghost == other.nghost
         return False
-
-# Cartesian coordinate class
 
 
 class Cartesian(Coordinates):
@@ -75,7 +77,11 @@ class Cartesian(Coordinates):
     def __str__(self) -> str:
         """Return a string representation of the Cartesian coordinates."""
         mystr = super().__str__()
-        mystr += f"\nx1v={self.x1v}\nx2v={self.x2v}\nx3v={self.x3v}"
+        x1v_str = " ".join(f"{x:.2f}" for x in self.x1v)
+        x2v_str = " ".join(f"{x:.2f}" for x in self.x2v)
+        x3v_str = " ".join(f"{x:.2f}" for x in self.x3v)
+
+        mystr += f"\nx1v=[{x1v_str}]\nx2v=[{x2v_str}]\nx3v=[{x3v_str}]"
         return f"{mystr}"
 
     def __eq__(self, other) -> bool:
@@ -84,8 +90,6 @@ class Cartesian(Coordinates):
             return super().__eq__(other) and self.x1v == other.x1v and \
                 self.x2v == other.x2v and self.x3v == other.x3v
         return False
-
-# Cylindrical coordinate class
 
 
 class Cylindrical(Coordinates):
@@ -106,7 +110,10 @@ class Cylindrical(Coordinates):
     def __str__(self) -> str:
         """Return a string representation of the cylindrical coordinates."""
         mystr = super().__str__()
-        mystr += f"\nx1v={self.x1v}\nx2v={self.x2v}\nx3v={self.x3v}"
+        x1v_str = " ".join(f"{x:.2f}" for x in self.x1v)
+        x2v_str = " ".join(f"{x:.2f}" for x in self.x2v)
+        x3v_str = " ".join(f"{x:.2f}" for x in self.x3v)
+        mystr += f"\nx1v=[{x1v_str}]\nx2v=[{x2v_str}]\nx3v=[{x3v_str}]"
         return f"{mystr}"
 
     def __eq__(self, other) -> bool:

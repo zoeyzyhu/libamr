@@ -1,18 +1,18 @@
-# pylint: disable = import-error, too-many-arguments, too-many-locals, redefined-outer-name, too-many-boolean-expressions, too-many-branches, undefined-variable, wrong-import-order
+# pylint: disable = import-error, too-many-arguments, too-many-locals, redefined-outer-name, too-many-boolean-expressions, too-many-branches, undefined-variable
 """MeshBlockTree class and related functions."""
 
-from region_size import RegionSize
+from math import floor, log2
 from typing import Optional
 from typing_extensions import Self
+from region_size import RegionSize
 from meshblock import MeshBlock
-from math import floor, log2
 
 
 class MeshBlockTree:
     """A class representing a mesh block tree."""
 
     max_num_leaves = 8
-    block_size = (1, 1, 1)
+    block_size = (1, 1, 1)  # default min block size
 
     @staticmethod
     def set_block_size(nx1: int, nx2: int = 1, nx3: int = 1) -> None:
@@ -33,7 +33,7 @@ class MeshBlockTree:
         self.leaf = []
 
     def generate_leaf(self, ox1: int = 0, ox2: int = 0, ox3: int = 0) -> Optional[Self]:
-        """Generate a leaf block."""
+        """Generate a leaf block without refinement."""
         nb1 = self.size.nx1 // MeshBlockTree.block_size[0]
         nb2 = self.size.nx2 // MeshBlockTree.block_size[1]
         nb3 = self.size.nx3 // MeshBlockTree.block_size[2]
@@ -96,11 +96,11 @@ class MeshBlockTree:
         return MeshBlockTree(rs, lx1, lx2, lx3, self)
 
     def generate_leaf_refine(self, ox1: int = 0, ox2: int = 0, ox3: int = 0) -> Optional[Self]:
-        """Generate a leaf block."""
+        """Generate a leaf block with refinement."""
         nx1 = self.size.nx1
         dx1 = (self.size.x1max - self.size.x1min) / (2. * nx1)
         x1min = self.size.x1min + ox1 * dx1 * nx1
-        x1max = self.size.x2max - (1 - ox1) * dx1 * nx1
+        x1max = self.size.x1max - (1 - ox1) * dx1 * nx1
 
         nx2 = self.size.nx2
         if nx2 > 1:
@@ -209,8 +209,8 @@ class MeshBlockTree:
 
     def __str__(self):
         """Return a string representation of the tree."""
-        return f"level={self.level}\nsize={self.size}\n" + \
-               f"lx1={self.lx1},lx2={self.lx2},lx3={self.lx3}\nleaves={self.leaf}"
+        return f"\nlevel={self.level}\nsize={self.size}\n" + \
+               f"lx1={bin(self.lx1)},lx2={bin(self.lx2)},lx3={bin(self.lx3)}\nleaves={self.leaf}"
 
 
 if __name__ == "__main__":
