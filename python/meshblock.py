@@ -1,4 +1,4 @@
-# pylint: disable = import-error, too-many-instance-attributes, too-many-branches, too-many-statements
+# pylint: disable = import-error, too-many-instance-attributes, too-many-branches, too-many-statements, fixme
 """Module containing the MeshBlock class."""
 
 from typing import Any
@@ -150,15 +150,16 @@ class MeshBlock:
         # set ghost zones to zero
         self.data[:] = -np.ones(self.data.shape)
         np.random.seed(seed)
-        self.ghost[(0, 0, 0)][:] = np.random.uniform(0, 1,
-                                                     size=(self.nx3, self.nx2, self.nx1, self.nvar))
+        self.ghost[(0, 0, 0)][:] = \
+            np.random.uniform(0, 1, size=(
+                self.nx3, self.nx2, self.nx1, self.nvar))
 
         return self
 
     def print_data(self) -> None:
         """Print the data in the mesh block."""
         for n in range(self.nvar):
-            print(f"var {n} = ")
+            print(f"\nvar {n} = ")
             for k in range(self.nc3):
                 print(f"(z = {self.coord.x3v[k]:.2f})")
                 for j in range(self.nc2):
@@ -167,6 +168,16 @@ class MeshBlock:
                     print()
                 if k < self.nc3 - 1:
                     print()
+
+    # TODO: implement prolongation
+    def prolongated_view(self, offset: (int, int, int),
+                         ox1: int, ox2: int, ox3: int) -> np.ndarray:
+        """Prolongate a view to a finer mesh block."""
+
+    # TODO: implement restriction
+    def restrict_view(self, offset: (int, int, int),
+                      ox1: int, ox2: int, ox3: int) -> np.ndarray:
+        """Restrict a view to a coarser mesh block."""
 
     def __str__(self) -> str:
         """Return a string representation of the mesh block."""

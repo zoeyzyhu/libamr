@@ -1,18 +1,18 @@
-# pylint: disable = import-error, too-many-arguments, too-many-locals, redefined-outer-name, too-many-boolean-expressions, too-many-branches, undefined-variable, wrong-import-order
+# pylint: disable = import-error, too-many-arguments, too-many-locals, redefined-outer-name, too-many-boolean-expressions,too-many-branches,undefined-variable, fixme
 """MeshBlockTree class and related functions."""
 
-from region_size import RegionSize
+from math import floor, log2
 from typing import Optional
 from typing_extensions import Self
+from region_size import RegionSize
 from meshblock import MeshBlock
-from math import floor, log2
 
 
 class MeshBlockTree:
     """A class representing a mesh block tree."""
 
     max_num_leaves = 8
-    block_size = (1, 1, 1)
+    block_size = (1, 1, 1)  # default min block size
 
     @staticmethod
     def set_block_size(nx1: int, nx2: int = 1, nx3: int = 1) -> None:
@@ -33,7 +33,7 @@ class MeshBlockTree:
         self.leaf = []
 
     def generate_leaf(self, ox1: int = 0, ox2: int = 0, ox3: int = 0) -> Optional[Self]:
-        """Generate a leaf block."""
+        """Generate a leaf block without refinement."""
         nb1 = self.size.nx1 // MeshBlockTree.block_size[0]
         nb2 = self.size.nx2 // MeshBlockTree.block_size[1]
         nb3 = self.size.nx3 // MeshBlockTree.block_size[2]
@@ -95,12 +95,12 @@ class MeshBlockTree:
 
         return MeshBlockTree(rs, lx1, lx2, lx3, self)
 
-    def generate_leaf_refine(self, ox1: int = 0, ox2: int = 0, ox3: int = 0) -> Optional[Self]:
-        """Generate a leaf block."""
+    def generate_leaf_refine(self, ox1: int = 0, ox2: int = 0, ox3: int = 0) -> Self:
+        """Generate a leaf block with refinement."""
         nx1 = self.size.nx1
         dx1 = (self.size.x1max - self.size.x1min) / (2. * nx1)
         x1min = self.size.x1min + ox1 * dx1 * nx1
-        x1max = self.size.x2max - (1 - ox1) * dx1 * nx1
+        x1max = self.size.x1max - (1 - ox1) * dx1 * nx1
 
         nx2 = self.size.nx2
         if nx2 > 1:
@@ -172,13 +172,14 @@ class MeshBlockTree:
             self.leaf = []
 
     def merge_blocks(self):
-        """Merge the block into a parent block."""
+        """Merge children blocks into a parent block."""
 
     def find_node(self, mblock: MeshBlock) -> Optional[Self]:
         """Find the node that contains the mesh block."""
 
+    # TODO: implement this
     def find_neighbors(self, offset: (int, int, int)) -> [Self]:
-        """Find the neighbors of the block."""
+        """Find neighbors of the block."""
         # 0, 1, 2, 3 represent left, right, up, down, if it is on board, return None
 
     def get_leaf(self, ox1: int, ox2: int = 0, ox3: int = 0) -> Optional[Self]:
@@ -209,8 +210,8 @@ class MeshBlockTree:
 
     def __str__(self):
         """Return a string representation of the tree."""
-        return f"level={self.level}\nsize={self.size}\n" + \
-               f"lx1={self.lx1},lx2={self.lx2},lx3={self.lx3}\nleaves={self.leaf}"
+        return f"\nlevel={self.level}\nsize={self.size}\n" + \
+               f"lx1={bin(self.lx1)},lx2={bin(self.lx2)},lx3={bin(self.lx3)}\nleaves={self.leaf}"
 
 
 if __name__ == "__main__":
@@ -218,26 +219,9 @@ if __name__ == "__main__":
     rs = RegionSize(x1dim=(0, 120., 8), x2dim=(0, 120., 4))
     root = MeshBlockTree(rs)
     root.create_tree()
+    root.print_tree()
 
-    print(root)
-
-    print(root.leaf[0])
-    print(root.leaf[0].leaf[0])
-    print(root.leaf[0].leaf[1])
-
-    print(root.leaf[1])
-    print(root.leaf[1].leaf[0])
-    print(root.leaf[1].leaf[1])
-
-    print(root.leaf[2])
-    print(root.leaf[2].leaf[0])
-    print(root.leaf[2].leaf[1])
-
-    print(root.leaf[3])
-    print(root.leaf[3].leaf[0])
-    print(root.leaf[3].leaf[1])
-
-    print("===== split block =====")
+    print("\n\n===== split block =====")
     root.leaf[3].leaf[1].split_block()
     print(root.leaf[3].leaf[1])
     print(root.leaf[3].leaf[1].leaf[0])
