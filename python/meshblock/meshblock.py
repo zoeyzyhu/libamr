@@ -3,10 +3,10 @@
 
 from typing import Any
 from typing_extensions import Self
-from numpy.lib.stride_tricks import as_strided
-from region_size import RegionSize
-from coordinate_factory import CoordinateFactory
 import numpy as np
+from numpy.lib.stride_tricks import as_strided
+from .region_size import RegionSize
+from .coordinate_factory import CoordinateFactory
 
 
 class MeshBlock:
@@ -142,7 +142,7 @@ class MeshBlock:
                     )
         return self
 
-    def part(self, offset: (int, int, int), of1: int, of2: int) -> np.ndarray:
+    def part(self, cubic_offset: (int, int, int), of1: int, of2: int) -> np.ndarray:
         """Extract a part of the mesh block."""
 
     def fill_random(self, seed: int = 0) -> Self:
@@ -170,12 +170,12 @@ class MeshBlock:
                     print()
 
     # TODO: implement prolongation
-    def prolongated_view(self, offset: (int, int, int),
+    def prolongated_view(self, cubic_offset: (int, int, int),
                          ox1: int, ox2: int, ox3: int) -> np.ndarray:
         """Prolongate a view to a finer mesh block."""
 
     # TODO: implement restriction
-    def restrict_view(self, offset: (int, int, int),
+    def restrict_view(self, cubic_offset: (int, int, int),
                       ox1: int, ox2: int, ox3: int) -> np.ndarray:
         """Restrict a view to a coarser mesh block."""
 

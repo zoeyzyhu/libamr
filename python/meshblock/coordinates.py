@@ -2,7 +2,7 @@
 """Module containing the Coordinates, Cartesian, and Cylindrical classes."""
 
 import numpy as np
-from region_size import RegionSize
+from .region_size import RegionSize
 
 """
 This is the staggering of a coordinate axis

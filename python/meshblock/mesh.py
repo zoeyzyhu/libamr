@@ -1,10 +1,10 @@
 # pylint: disable = import-error, too-few-public-methods, unused-argument, unused-variable, unused-import, undefined-variable
 """Mesh class and related functions."""
 
-from meshblock_tree import MeshBlockTree
-from coordinate_factory import CoordinateFactory
-from typing_extensions import Self
 import ray
+from typing_extensions import Self
+from .meshblock_tree import MeshBlockTree
+from .coordinate_factory import CoordinateFactory
 
 
 @ray.remote
