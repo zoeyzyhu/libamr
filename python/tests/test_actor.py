@@ -1,11 +1,11 @@
-# pylint: disable = wrong-import-order
+# pylint: disable = wrong-import-position
 
 """Test module packing as environment on Ray."""
 
-import meshblock as mb
-import ray
 import sys
+import ray
 sys.path.append('../')
+import meshblock as mb
 
 ray.init(runtime_env={"py_modules": [mb]})
 

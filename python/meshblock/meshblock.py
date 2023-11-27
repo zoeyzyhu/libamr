@@ -145,11 +145,10 @@ class MeshBlock:
     def part(self, cubic_offset: (int, int, int), of1: int, of2: int) -> np.ndarray:
         """Extract a part of the mesh block."""
 
-    def fill_random(self, seed: int = 0) -> Self:
+    def fill_random(self) -> Self:
         """Fill ghost zones with random values."""
         # set ghost zones to zero
         self.data[:] = -np.ones(self.data.shape)
-        np.random.seed(seed)
         self.ghost[(0, 0, 0)][:] = \
             np.random.uniform(0, 1, size=(
                 self.nx3, self.nx2, self.nx1, self.nvar))
@@ -159,7 +158,7 @@ class MeshBlock:
     def print_data(self) -> None:
         """Print the data in the mesh block."""
         for n in range(self.nvar):
-            print(f"\nvar {n} = ")
+            print(f"var {n} = ")
             for k in range(self.nc3):
                 print(f"(z = {self.coord.x3v[k]:.2f})")
                 for j in range(self.nc2):
