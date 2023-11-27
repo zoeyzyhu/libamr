@@ -1,8 +1,8 @@
 # pylint: disable = import-error, too-few-public-methods
 """Module containing the CoordinateFactory class."""
 
-from region_size import RegionSize
-from coordinates import Cartesian, Cylindrical
+from .region_size import RegionSize
+from .coordinates import Cartesian, Cylindrical
 
 
 class CoordinateFactory:

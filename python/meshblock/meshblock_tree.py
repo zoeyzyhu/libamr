@@ -4,8 +4,8 @@
 from math import floor, log2
 from typing import Optional
 from typing_extensions import Self
-from region_size import RegionSize
-from meshblock import MeshBlock
+from .region_size import RegionSize
+from .meshblock import MeshBlock
 
 
 class MeshBlockTree:
@@ -178,7 +178,7 @@ class MeshBlockTree:
         """Find the node that contains the mesh block."""
 
     # TODO: implement this
-    def find_neighbors(self, offset: (int, int, int)) -> [Self]:
+    def find_neighbors(self, cubic_offset: (int, int, int)) -> [Self]:
         """Find neighbors of the block."""
         # 0, 1, 2, 3 represent left, right, up, down, if it is on board, return None
 

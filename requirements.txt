@@ -4,6 +4,7 @@ cpplint
 numpy
 pre-commit
 pylint
-ray[default]
+ray
 twine
+typing-extensions
 wheel
