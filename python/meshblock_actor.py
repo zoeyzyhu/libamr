@@ -10,7 +10,7 @@ ray.init(runtime_env={"py_modules": [mb]})
 # @ray.remote
 
 
-def put_neighbors_info(node: MeshBlockTree) -> None:
+def put_neighbors_info(node: mb.MeshBlockTree) -> None:
     """Put the neighbor information of a node into the object store."""
     neighbor_info = {}
     for ox3 in [-1, 0, 1]:

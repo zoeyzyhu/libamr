@@ -1,10 +1,10 @@
-# pylint: disable = import-error, too-few-public-methods, unused-argument, unused-variable, unused-import, undefined-variable
+# pylint: disable = import-error, too-few-public-methods, unused-argument, unused-variable, unused-import, redefined-outer-name, undefined-variable
 """Mesh class and related functions."""
 
 import ray
 from typing_extensions import Self
 from .meshblock_tree import MeshBlockTree
-from .coordinate_factory import CoordinateFactory
+from .region_size import RegionSize
 
 
 @ray.remote
@@ -17,4 +17,6 @@ class Mesh:
 
 
 if __name__ == "__main__":
+    rs = RegionSize(x1dim=(0, 120., 8), x2dim=(0, 120., 4))
+    tree = MeshBlockTree(rs)
     mesh = Mesh(tree, "cartesian", 1)
