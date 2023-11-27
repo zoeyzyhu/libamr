@@ -209,7 +209,7 @@ class MeshBlockTree:
                 leaf.print_tree()
 
     def __str__(self):
-        """Return a string representation of the tree."""
+        """Return a string representation of the node."""
         return f"\nlevel={self.level}\nsize={self.size}\n" + \
                f"lx1={bin(self.lx1)},lx2={bin(self.lx2)},lx3={bin(self.lx3)}\nleaves={self.leaf}"
 
