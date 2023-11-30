@@ -1,11 +1,10 @@
-# pylint: disable = import-error, cyclic-import, too-many-arguments, too-many-locals, redefined-outer-name, too-many-boolean-expressions,too-many-branches,undefined-variable, fixme
+# pylint: disable = import-error, too-many-nested-blocks, too-many-instance-attributes, cyclic-import, too-many-arguments, too-many-locals, redefined-outer-name, too-many-boolean-expressions,too-many-branches,undefined-variable, fixme
 """Tree class and related functions."""
 
 from math import floor, log2
 from typing import Optional
 from typing_extensions import Self
 from .region_size import RegionSize
-from .meshblock import MeshBlock
 
 
 class Tree:
@@ -26,11 +25,15 @@ class Tree:
         self.lx2 = lx2
         self.lx3 = lx3
 
+        self.parent = parent
+
         if parent is None:
             self.level = 0
         else:
             self.level = parent.level + 1
         self.leaf = []
+
+        self.nghost = 1  # ???????
 
     def generate_leaf(self, ox1: int = 0, ox2: int = 0, ox3: int = 0) -> Optional[Self]:
         """Generate a leaf block without refinement."""
@@ -170,43 +173,117 @@ class Tree:
                 break
         if all_none:
             self.leaf = []
+        else:
+            if refine:
+                # print("original from", self)
+                for ox3 in [-1, 0, 1]:
+                    for ox2 in [-1, 0, 1]:
+                        for ox1 in [-1, 0, 1]:
+                            if ox1 == 0 and ox2 == 0:  # and ox3 == 0
+                                continue
+                            cubic_offset = (ox3, ox2, ox1)
+                            neighbors = self.find_neighbors(cubic_offset)
+                            for neighbor in neighbors:
+                                if neighbor is not None:
+                                    # print(cubic_offset, neighbor)
+                                    neighbor.split_block_chain(self.level)
+
+    def split_block_chain(self, neighbor_level):
+        """Split the block chain."""
+        if self.level - neighbor_level >= 0:
+            # print("does not need to split")
+            return
+        self.split_block()
 
     def merge_blocks(self):
         """Merge children blocks into a parent block."""
 
-    def find_node(self, mblock: MeshBlock) -> Optional[Self]:
-        """Find the node that contains the mesh block."""
+    def find_neighbors(self, cubic_offset: (int, int, int)) -> [Self]:
+        """Find neighbors of the block."""
+        # -1, 0, 1 represent left, mid, right on viewpoint
+        self_x1s, self_x1e = self.size.x1min, self.size.x1max
+        self_x2s, self_x2e = self.size.x2min, self.size.x2max
+        self_x3s, self_x3e = self.size.x3min, self.size.x3max
 
-    def find_node_by_coord(self, x1: int, x2: int, x3: int) -> Optional[Self]:
-        """Find the node that contains the coordinate using binary search along each axis."""
-        # Check if the coordinates are within the bounds of this node
-        if not (self.size.x1min <= x1 <= self.size.x1max and
-                self.size.x2min <= x2 <= self.size.x2max and
-                self.size.x3min <= x3 <= self.size.x3max):
-            return None
+        x1_interval = x2_interval = x3_interval = None
 
-        # If this node has no leaves, it is a leaf node, return itself
-        if not self.leaf:
+        x1_ghost = (self_x1e - self_x1s) / self.size.nx1 * self.nghost
+        x2_ghost = (self_x2e - self_x2s) / self.size.nx2 * self.nghost
+        x3_ghost = (self_x3e - self_x3s) / self.size.nx3 * self.nghost
+
+        if cubic_offset[0] == 0:
+            x3_interval = (self_x3s, self_x3e)
+        elif cubic_offset[0] == 1:
+            x3_interval = (self_x3e, self_x3e + x3_ghost)
+        else:
+            x3_interval = (self_x3s - x3_ghost, self_x3s)
+
+        if cubic_offset[1] == 0:
+            x2_interval = (self_x2s, self_x2e)
+        elif cubic_offset[1] == 1:
+            x2_interval = (self_x2e, self_x2e + x2_ghost)
+        else:
+            x2_interval = (self_x2s - x2_ghost, self_x2s)
+
+        if cubic_offset[2] == 0:
+            x1_interval = (self_x1s, self_x1e)
+        elif cubic_offset[2] == 1:
+            x1_interval = (self_x1e, self_x1e + x1_ghost)
+        else:
+            x1_interval = (self_x1s - x1_ghost, self_x1s)
+
+        neighbor = self.locate_neighbors_up(
+            x1_interval, x2_interval, x3_interval)
+
+        if neighbor is None:
+            return []
+        if len(neighbor.leaf) == 0:
+            return [neighbor]
+        return neighbor.leaf
+
+    # only support 2d now
+    def locate_neighbors_up(self, x1_interval: (int, int),
+                            x2_interval: (int, int), x3_interval: (int, int)):
+        """Locate neighbors up."""
+        self_x1s, self_x1e = self.size.x1min, self.size.x1max
+        self_x2s, self_x2e = self.size.x2min, self.size.x2max
+        self_x3s, self_x3e = self.size.x3min, self.size.x3max
+
+        if self_x1s <= x1_interval[0] < x1_interval[1] <= self_x1e and \
+                self_x2s <= x2_interval[0] < x2_interval[1] <= self_x2e and \
+                self_x3s <= x3_interval[0] < x3_interval[1] <= self_x3e:
+            # already reach most recent common ancestor
+            neighbor = self.locate_neighbors_down(
+                x1_interval, x2_interval, x3_interval)
+
+            return neighbor
+        if self.level == 0:
+            return None  # it is on board, ghost zone does not exist
+        return self.parent.locate_neighbors_up(x1_interval, x2_interval, x3_interval)
+
+    # only support 2d now
+    def locate_neighbors_down(self, x1_interval: (int, int),
+                              x2_interval: (int, int), x3_interval: (int, int)):
+        """Locate neighbors down."""
+        neighbor = None
+        for child in self.leaf:
+            if child is not None:
+                child_x1s, child_x1e = child.size.x1min, child.size.x1max
+                child_x2s, child_x2e = child.size.x2min, child.size.x2max
+                child_x3s, child_x3e = child.size.x3min, child.size.x3max
+
+                if child_x1s <= x1_interval[0] < x1_interval[1] <= child_x1e \
+                        and child_x2s <= x2_interval[0] < x2_interval[1] <= child_x2e \
+                        and child_x3s <= x3_interval[0] < x3_interval[1] <= child_x3e:
+
+                    neighbor = child.locate_neighbors_down(
+                        x1_interval, x2_interval, x3_interval)
+                    break
+
+        if neighbor is None:
             return self
 
-        # Binary search along each axis
-        ox1 = 0 if x1 <= (self.size.x1min + self.size.x1max) / 2 else 1
-        ox2 = 0 if x2 <= (self.size.x2min + self.size.x2max) / 2 else 1
-        ox3 = 0 if x3 <= (self.size.x3min + self.size.x3max) / 2 else 1
-
-        # Determine the child node index based on the binary search results
-        leaf_index = ox1 + ox2 * 2 + ox3 * 4
-
-        # Recursively search through the child node
-        if self.leaf[leaf_index] is not None:
-            return self.leaf[leaf_index].find_node_by_coord(x1, x2, x3)
-
-        return None  # Should not reach here in a properly constructed tree
-
-    # TODO: implement this
-    def find_neighbors(self, cubic_offsets: (int, int, int)) -> [Self]:
-        """Find neighbors of the block."""
-        # 0, 1, 2, 3 represent left, right, up, down, if it is on board, return None
+        return neighbor
 
     def get_leaf(self, ox1: int, ox2: int = 0, ox3: int = 0) -> Optional[Self]:
         """Get the leaf block."""
@@ -237,7 +314,7 @@ class Tree:
     def __str__(self):
         """Return a string representation of the node."""
         return f"\nlevel={self.level}\nsize={self.size}\n" + \
-               f"lx1={bin(self.lx1)},lx2={bin(self.lx2)},lx3={bin(self.lx3)}\nleaves={self.leaf}"
+               f"lx1={bin(self.lx1)},lx2={bin(self.lx2)},lx3={bin(self.lx3)}\nleaves={self.leaf}\n"
 
 
 if __name__ == "__main__":
@@ -245,12 +322,23 @@ if __name__ == "__main__":
     rs = RegionSize(x1dim=(0, 120., 8), x2dim=(0, 120., 4))
     root = Tree(rs)
     root.create_tree()
-    root.print_tree()
 
     print("\n\n===== split block =====")
     root.leaf[3].leaf[1].split_block()
-    print(root.leaf[3].leaf[1])
-    print(root.leaf[3].leaf[1].leaf[0])
-    print(root.leaf[3].leaf[1].leaf[1])
-    print(root.leaf[3].leaf[1].leaf[2])
-    print(root.leaf[3].leaf[1].leaf[3])
+    print(root.leaf[1].leaf[0])
+
+    n1 = root.leaf[3].leaf[1].leaf[0]
+
+    print("\n\n===== split block chain =====")
+
+    n1.split_block()
+
+    n1.leaf[0].split_block()
+
+    root.leaf[0].leaf[0].split_block()
+
+    root.print_tree()
+    # print(root.leaf[3].leaf[1].leaf[0])
+    # print(root.leaf[3].leaf[1].leaf[1])
+    # print(root.leaf[3].leaf[1].leaf[2])
+    # print(root.leaf[3].leaf[1].leaf[3])

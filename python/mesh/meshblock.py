@@ -89,19 +89,6 @@ class MeshBlock:
             self.nx3, self.nx2, self.nx1, self.nvar))
         return self
 
-    def print_data(self) -> None:
-        """Print the data in the mesh block."""
-        for n in range(self.nvar):
-            print(f"var {n} = ")
-            for k, z_value in enumerate(self.coord.x3v):
-                print(f"(z = {z_value:.2f})")
-                for j in range(self.nc2):
-                    for i in range(self.nc1):
-                        print(f"{self.data[k, j, i, n]:.3f}, ", end="")
-                    print()
-                if k < self.nc3 - 1:
-                    print()
-
     def ghost_range(self, offsets: (int, int, int)) -> tuple[int]:
         """Return the range of ghost zone specified by the cubic offsets."""
         nghost = self.coord.nghost
@@ -205,6 +192,19 @@ class MeshBlock:
             writeable=True
         )
         return view
+
+    def print_data(self) -> None:
+        """Print the data in the mesh block."""
+        for n in range(self.nvar):
+            print(f"var {n} = ")
+            for k, z_value in enumerate(self.coord.x3v):
+                print(f"(z = {z_value:.2f})")
+                for j in range(self.nc2):
+                    for i in range(self.nc1):
+                        print(f"{self.data[k, j, i, n]:.3f}, ", end="")
+                    print()
+                if k < self.nc3 - 1:
+                    print()
 
     def __str__(self) -> str:
         """Return a string representation of the mesh block."""
