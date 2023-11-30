@@ -120,7 +120,7 @@ if __name__ == '__main__':
     # tree.print_tree()
 
     # Launch actors based on the tree
-    ray.init(runtime_env={"py_modules": [mb]})
+    ray.init(runtime_env={"py_modules": [me]})
     # print(ray.nodes())
     # print(ray.available_resources())
     actors = launch_actors(tree)
