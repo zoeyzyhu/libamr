@@ -1,4 +1,4 @@
-# pylint: disable = too-many-instance-attributes
+# pylint: disable = too-many-instance-attributes, too-many-arguments
 """This module contains the RegionSize class."""
 
 
@@ -7,39 +7,46 @@ class RegionSize:
 
     def __init__(self, x1dim: (float, float, int),
                  x2dim: (float, float, int) = (-0.5, 0.5, 1),
-                 x3dim: (float, float, int) = (-0.5, 0.5, 1)):
+                 x3dim: (float, float, int) = (-0.5, 0.5, 1),
+                 nghost: int = 1, nvar: int = 1):
         """Initialize RegionSize with x1, x2, and x3 dimensions."""
-        self.x1min, self.x1max, self.nx1 = float(
-            x1dim[0]), float(x1dim[1]), int(x1dim[2])
-        if self.x1min > self.x1max:
-            raise ValueError(f"x1min = {self.x1min} > x1max = {self.x1max}")
-        if self.nx1 < 1:
-            raise ValueError(f"nx1 = {self.nx1} < 1")
+        self.nghost = nghost
+        self.nvar = nvar
 
-        self.x2min, self.x2max, self.nx2 = float(
-            x2dim[0]), float(x2dim[1]), int(x2dim[2])
-        if self.x2min > self.x2max:
-            raise ValueError(f"x2min = {self.x2min} > x2max = {self.x2max}")
-        if self.nx2 < 1:
-            raise ValueError(f"nx2 = {self.nx2} < 1")
+        self.x1min, self.x1max, self.nx1 = map(float, x1dim)
+        self.x2min, self.x2max, self.nx2 = map(float, x2dim)
+        self.x3min, self.x3max, self.nx3 = map(float, x3dim)
+        self.nx1, self.nx2, self.nx3 = map(int, [self.nx1, self.nx2, self.nx3])
 
-        self.x3min, self.x3max, self.nx3 = float(
-            x3dim[0]), float(x3dim[1]), int(x3dim[2])
-        if self.x3min > self.x3max:
-            raise ValueError(f"x3min = {self.x3min} > x3max = {self.x3max}")
-        if self.nx3 < 1:
-            raise ValueError(f"nx3 = {self.nx3} < 1")
+        self.nc3 = self.nx3 + 2 * self.nghost if self.nx3 > 1 else 1
+        self.nc2 = self.nx2 + 2 * self.nghost if self.nx2 > 1 else 1
+        self.nc1 = self.nx1 + 2 * self.nghost
+
+        for dim, name in [(self.nx1, 'x1'), (self.nx2, 'x2'), (self.nx3, 'x3')]:
+            if dim < 1:
+                raise ValueError(f"{name} dimension (n{name}) must be >= 1")
+
+        for dmin, dmax, name in [(self.x1min, self.x1max, 'x1'),
+                                 (self.x2min, self.x2max, 'x2'),
+                                 (self.x3min, self.x3max, 'x3')]:
+            if dmin > dmax:
+                raise ValueError(f"{name}min = {dmin} > {name}max = {dmax}")
 
     def __str__(self) -> str:
         """Return a string representation of the region size."""
+        dimensions = [
+            f"[{getattr(self, f'x{i}min')}, {getattr(self, f'x{i}max')}]"
+            for i in range(1, 4)
+        ]
+        dim_str = f"{dimensions[0]} x {dimensions[1]} x {dimensions[2]}, " \
+            f"nx1 ({self.nx1}) x nx2 ({self.nx2}) x nx3 ({self.nx3}), "
         if self.nx3 == 1:
+            dim_str = f"{dimensions[0]} x {dimensions[1]}, " \
+                f"nx1 ({self.nx1}) x nx2 ({self.nx2}), "
             if self.nx2 == 1:
-                return f"[{self.x1min}, {self.x1max}], nx1 = {self.nx1}"
-            return f"[{self.x1min}, {self.x1max}] x [{self.x2min}, " + \
-                f"{self.x2max}], nx1 = {self.nx1}, nx2 = {self.nx2}"
-        return f"[{self.x1min}, {self.x1max}] x [{self.x2min}, " + \
-            f"{self.x2max}] x [{self.x3min}, {self.x3max}], " + \
-            f"nx1 = {self.nx1}, nx2 = {self.nx2}, nx3 = {self.nx3}"
+                dim_str = f"{dimensions[0]}, nx1 ({self.nx1}), "
+        dim_str += f"nvar = {self.nvar}, nghost = {self.nghost}"
+        return dim_str
 
     def __eq__(self, other) -> bool:
         """Check if two RegionSize instances are equal."""
@@ -49,7 +56,8 @@ class RegionSize:
                 self.x2min == other.x2min and \
                 self.x2max == other.x2max and self.nx2 == other.nx2 and \
                 self.x3min == other.x3min and \
-                self.x3max == other.x3max and self.nx3 == other.nx3
+                self.x3max == other.x3max and self.nx3 == other.nx3 and \
+                self.nghost == other.nghost and self.nvar == other.nvar
         return False
 
 

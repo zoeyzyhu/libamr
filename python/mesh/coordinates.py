@@ -19,21 +19,27 @@ x1f(i-2)--+--x1f(i-1)--+--x1f(i)---+--x1f(i+i)--+--x1f(i+2)--+--x1f(i+3)
 class Coordinates:
     """Base class for coordinate representation."""
 
-    def __init__(self, size: RegionSize, nghost: int):
+    def __init__(self, size: RegionSize):
         """Initialize coordinates with region size and ghost zones."""
-        def generate_coordinate_array(xmin, xmax, nx):
-            delta = (xmax - xmin) / nx
-            extended_min = xmin - nghost * delta
-            extended_max = xmax + nghost * delta
-            return np.linspace(extended_min, extended_max,
-                               num=nx + 1 + 2 * nghost)
+        nghost = size.nghost
+        self.x1f = self.generate_coordinates(
+            size.x1min, size.x1max, size.nx1, nghost)
 
-        self.nghost = nghost
-        self.x1f = generate_coordinate_array(size.x1min, size.x1max, size.nx1)
-        nghost = 0 if size.nx2 == 1 else self.nghost
-        self.x2f = generate_coordinate_array(size.x2min, size.x2max, size.nx2)
-        nghost = 0 if size.nx3 == 1 else self.nghost
-        self.x3f = generate_coordinate_array(size.x3min, size.x3max, size.nx3)
+        nghost = 0 if size.nx2 == 1 else size.nghost
+        self.x2f = self.generate_coordinates(
+            size.x2min, size.x2max, size.nx2, nghost)
+
+        nghost = 0 if size.nx3 == 1 else size.nghost
+        self.x3f = self.generate_coordinates(
+            size.x3min, size.x3max, size.nx3, nghost)
+
+    def generate_coordinates(self, xmin, xmax, nx, nghost):
+        """Generate an array of coordinates with ghost zones."""
+        delta = (xmax - xmin) / nx
+        extended_min = xmin - nghost * delta
+        extended_max = xmax + nghost * delta
+        return np.linspace(extended_min, extended_max,
+                           num=int(nx) + 1 + 2 * nghost)
 
     def __str__(self) -> str:
         """Return a string representation of the coordinates."""
@@ -43,25 +49,23 @@ class Coordinates:
         return f"Coordinates:\n" \
             f"x1f=[{x1f_str}]\n" \
             f"x2f=[{x2f_str}]\n" \
-            f"x3f=[{x3f_str}]\n" \
-            f"nghost={self.nghost}"
+            f"x3f=[{x3f_str}]"
 
     def __eq__(self, other) -> bool:
         """Check if two Coordinates instances are equal."""
         if isinstance(other, Coordinates):
             return np.array_equal(self.x1f, other.x1f) and \
                 np.array_equal(self.x2f, other.x2f) and \
-                np.array_equal(self.x3f, other.x3f) and \
-                self.nghost == other.nghost
+                np.array_equal(self.x3f, other.x3f)
         return False
 
 
 class Cartesian(Coordinates):
     """Class representing Cartesian coordinates."""
 
-    def __init__(self, size: RegionSize, nghost: int = 0):
+    def __init__(self, size: RegionSize):
         """Initialize Cartesian coordinates."""
-        super().__init__(size, nghost)
+        super().__init__(size)
         self.x1v = (self.x1f[1:] + self.x1f[:-1]) / 2.0
         self.x2v = (self.x2f[1:] + self.x2f[:-1]) / 2.0
         self.x3v = (self.x3f[1:] + self.x3f[:-1]) / 2.0
@@ -91,9 +95,9 @@ class Cartesian(Coordinates):
 class Cylindrical(Coordinates):
     """Class representing cylindrical coordinates."""
 
-    def __init__(self, size: RegionSize, nghost: int = 0):
+    def __init__(self, size: RegionSize):
         """Initialize cylindrical coordinates."""
-        super().__init__(size, nghost)
+        super().__init__(size)
         if size.x1min < 0:
             raise ValueError(
                 "x1min (minimum radius) must be >= 0 for cylindrical coordinates")
@@ -126,10 +130,10 @@ class Cylindrical(Coordinates):
 
 
 if __name__ == "__main__":
-    size = RegionSize((-1.0, 1.0, 5))
-    coords = Cartesian(size, nghost=2)
+    size = RegionSize((-1.0, 1.0, 5), nghost=2)
+    coords = Cartesian(size)
     print(coords)
 
     size.x1min = 0.0
-    coords = Cylindrical(size, nghost=2)
+    coords = Cylindrical(size)
     print(coords)

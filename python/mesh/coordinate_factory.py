@@ -9,12 +9,12 @@ class CoordinateFactory:
     """A factory class for creating coordinate objects."""
 
     @staticmethod
-    def create(size: RegionSize, coordinate_type: str, nghost: int = 0):
+    def create(size: RegionSize, coordinate_type: str = "cartesian"):
         """Create a coordinate object based on the specified type."""
         if coordinate_type == "cartesian":
-            coord = Cartesian(size, nghost)
+            coord = Cartesian(size)
         elif coordinate_type == "cylindrical":
-            coord = Cylindrical(size, nghost)
+            coord = Cylindrical(size)
         else:
             raise ValueError(f"Invalid coordinate type: {coordinate_type}")
         return coord

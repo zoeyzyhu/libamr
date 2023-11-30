@@ -5,39 +5,41 @@ from typing import List
 from typing import Tuple
 import ray
 from ray import ObjectRef
-import mesh as me
 import numpy as np
+import mesh as me
 
 
 @ray.remote
 class MeshBlockActor:
     """Remotely launch actors as mesh blocks."""
 
-    def __init__(self, tree: me.Tree,
-                 coordinate_type: str, nghost: int) -> None:
+    def __init__(self) -> None:
+        """Initialize MeshBlockActor."""
+        self.node_id = ray.get_runtime_context().get_node_id()
+        self.worker_id = ray.get_runtime_context().get_worker_id()
+        self.size = None
+        self.mblock = None
+
+    def new(self, size: me.RegionSize, coordinate_type: str = "cartesian") -> None:
         """Initialize MeshBlockActor from its tree node."""
-        self.worker_id = ray.worker.global_worker.worker_id.hex()
-        self.device_id = ray.get_runtime_context().get_node_id()
-        self.node = tree
-        self.mblock = me.MeshBlock(tree.size, coordinate_type, nghost)
+        self.size = size
+        self.mblock = me.MeshBlock(size, coordinate_type)
         self.mblock.allocate().fill_random()
 
-    def restart_from(self, data_ref: List[ObjectRef]) -> None:
+    def relaunch(self, data_ref: ObjectRef) -> None:
         """Restart MeshBlockActor from its tree node."""
-        self.worker_id = ray.worker.global_worker.worker_id.hex()
-        self.device_id = ray.get_runtime_context().get_node_id()
-        self.node, self.mblock = ray.get(data_ref)
+        self.mblock = ray.get(data_ref)
 
     def get_data(self) -> Tuple[me.MeshBlock, me.RegionSize, int]:
         """Print the mesh block."""
-        return self.mblock, self.node.size, self.worker_id, self.device_id
+        return self.size, self.mblock, self.node_id, self.worker_id
 
     def put_data(self):
         """Put the mesh block in Plasma store."""
-        return ray.put([self.node, self.mblock])
+        return ray.put(self.mblock)
 
     def get_view(self, offset: (int, int, int)) -> np.ndarray:
-        """Get the view of the mesh block."""
+        """Get the view of the interior."""
         return self.mblock.view[offset]
 
     def get_view_prolong(self, my_offset: (int, int, int),
@@ -89,43 +91,48 @@ class MeshBlockActor:
 def launch_actors(node: me.Tree) -> List[MeshBlockActor]:
     """Launch actors based on the tree."""
     actors = []
-    nghost = 1
-
-    if not node.leaf:
+    if not node.children:
         actor = MeshBlockActor.remote()
-        actor.new.remote(node, "cartesian", nghost)
+        actor.new.remote(node.size)
         actors.append(actor)
     else:
-        for leaf in node.leaf:
+        for leaf in node.children:
             if leaf:
                 actors.extend(launch_actors(leaf))
-
     return actors
 
 
 def print_actors(actors: List[MeshBlockActor]) -> None:
     """Print the mesh block."""
     for actor in actors:
-        mblock, size, worker_id, node = ray.get(actor.get_data.remote())
-        print(f"\nNode:{node}\nWorker:{worker_id}\nSize: {size}\n")
+        size, mblock, node_id, worker_id = ray.get(actor.get_data.remote())
+        print(f"\nNode:{node_id}\nWorker:{worker_id}\n{size}")
         mblock.print_data()
 
 
 if __name__ == '__main__':
     # Initial split without refinement
-    me.Tree.set_block_size(nx1=2, nx2=2, nx3=1)
-    rs = me.RegionSize(x1dim=(0, 120., 8), x2dim=(0, 120., 4))
-    tree = me.Tree(rs)
+    size = me.RegionSize(x1dim=(0, 120., 8), x2dim=(0, 120., 4))
+    me.Tree.set_block_size(nx1=4, nx2=2, nx3=1)
+    tree = me.Tree(size)
     tree.create_tree()
-    # tree.print_tree()
+    tree.print_tree()
 
     # Launch actors based on the tree
     ray.init(runtime_env={"py_modules": [me]})
-    # print(ray.nodes())
-    # print(ray.available_resources())
     actors = launch_actors(tree)
-
     print_actors(actors)
+
+    # Refine the tree
+    node_to_refine = tree.children[3]
+    node_to_refine.split_block()
+    tree.print_tree()
+
+    ray.kill(actors[3])
+    new_actors = launch_actors(node_to_refine)
+    actors = actors[:3] + new_actors + actors[4:]
+    print_actors(actors)
+    print(actors)
 
     # Shutdown Ray
     ray.shutdown()
@@ -140,7 +147,7 @@ if __name__ == '__main__':
     new_actors = []
     for data_ref in data_refs:
         actor = MeshBlockActor.remote()
-        actor.restart_from.remote(data_ref)
+        actor.relaunch.remote(data_ref)
         new_actors.append(actor)
 
     print(new_actors)
@@ -148,7 +155,7 @@ if __name__ == '__main__':
 
 
     # Refine the tree
-    node_to_refine = tree.leaf[3]
+    node_to_refine = tree.children[3]
     node_to_refine.split_block()
     tree.print_tree()
 

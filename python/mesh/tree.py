@@ -3,6 +3,7 @@
 
 from math import floor, log2
 from typing import Optional
+from typing import Tuple
 from typing_extensions import Self
 from .region_size import RegionSize
 
@@ -10,7 +11,7 @@ from .region_size import RegionSize
 class Tree:
     """A class representing a mesh block tree."""
 
-    max_num_leaves = 8
+    max_num_leaves = 8  # default # leaves in 3d after split
     block_size = (1, 1, 1)  # default min block size
 
     @staticmethod
@@ -18,25 +19,17 @@ class Tree:
         """Set the block size."""
         Tree.block_size = (nx1, nx2, nx3)
 
-    def __init__(self, size: RegionSize, lx1: int = 0, lx2: int = 0, lx3: int = 0, parent=None):
+    def __init__(self, size: RegionSize,
+                 logicloc: Tuple[int, int, int] = (0, 0, 0), parent=None):
         """Initialize Tree with size, level, and optional parent."""
         self.size = size
-        self.lx1 = lx1
-        self.lx2 = lx2
-        self.lx3 = lx3
-
+        self.lx3, self.lx2, self.lx1 = logicloc
         self.parent = parent
+        self.children = []
+        self.level = parent.level + 1 if parent else 0
 
-        if parent is None:
-            self.level = 0
-        else:
-            self.level = parent.level + 1
-        self.leaf = []
-
-        self.nghost = 1  # ???????
-
-    def generate_leaf(self, ox1: int = 0, ox2: int = 0, ox3: int = 0) -> Optional[Self]:
-        """Generate a leaf block without refinement."""
+    def generate_child(self, ox1: int = 0, ox2: int = 0, ox3: int = 0) -> Optional[Self]:
+        """Generate a child block without refinement."""
         nb1 = self.size.nx1 // Tree.block_size[0]
         nb2 = self.size.nx2 // Tree.block_size[1]
         nb3 = self.size.nx3 // Tree.block_size[2]
@@ -96,10 +89,10 @@ class Tree:
         lx2 = self.lx2 * 2 + ox2
         lx3 = self.lx3 * 2 + ox3
 
-        return Tree(rs, lx1, lx2, lx3, self)
+        return Tree(rs, (lx3, lx2, lx1), self)
 
-    def generate_leaf_refine(self, ox1: int = 0, ox2: int = 0, ox3: int = 0) -> Self:
-        """Generate a leaf block with refinement."""
+    def generate_child_refine(self, ox1: int = 0, ox2: int = 0, ox3: int = 0) -> Self:
+        """Generate a child block with refinement."""
         nx1 = self.size.nx1
         dx1 = (self.size.x1max - self.size.x1min) / (2. * nx1)
         x1min = self.size.x1min + ox1 * dx1 * nx1
@@ -131,14 +124,14 @@ class Tree:
         lx2 = self.lx2 * 2 + ox2
         lx3 = self.lx3 * 2 + ox3
 
-        return Tree(rs, lx1, lx2, lx3, self)
+        return Tree(rs, (lx3, lx2, lx1), self)
 
     def split_block(self, refine=True) -> None:
         """Split the block into 8 sub-blocks."""
-        if len(self.leaf) > 0:
+        if len(self.children) > 0:
             raise ValueError("This block is not a leaf, can not split it")
 
-        self.leaf = [None] * self.max_num_leaves
+        self.children = [None] * self.max_num_leaves
 
         if self.size.nx1 > 1:
             ox1_range = [0, 1]
@@ -158,21 +151,21 @@ class Tree:
         for ox3 in ox3_range:
             for ox2 in ox2_range:
                 for ox1 in ox1_range:
-                    leaf_index = ox1 + ox2 * 2 + ox3 * 4
+                    child_index = ox1 + ox2 * 2 + ox3 * 4
                     if refine:
-                        self.leaf[leaf_index] = self.generate_leaf_refine(
+                        self.children[child_index] = self.generate_child_refine(
                             ox1, ox2, ox3)
                     else:
-                        self.leaf[leaf_index] = self.generate_leaf(
+                        self.children[child_index] = self.generate_child(
                             ox1, ox2, ox3)
 
         all_none = True
-        for leaf in self.leaf:
-            if leaf is not None:
+        for child in self.children:
+            if child is not None:
                 all_none = False
                 break
         if all_none:
-            self.leaf = []
+            self.children = []
         else:
             if refine:
                 # print("original from", self)
@@ -207,9 +200,9 @@ class Tree:
 
         x1_interval = x2_interval = x3_interval = None
 
-        x1_ghost = (self_x1e - self_x1s) / self.size.nx1 * self.nghost
-        x2_ghost = (self_x2e - self_x2s) / self.size.nx2 * self.nghost
-        x3_ghost = (self_x3e - self_x3s) / self.size.nx3 * self.nghost
+        x1_ghost = (self_x1e - self_x1s) / self.size.nx1 * self.size.nghost
+        x2_ghost = (self_x2e - self_x2s) / self.size.nx2 * self.size.nghost
+        x3_ghost = (self_x3e - self_x3s) / self.size.nx3 * self.size.nghost
 
         if cubic_offset[0] == 0:
             x3_interval = (self_x3s, self_x3e)
@@ -237,9 +230,9 @@ class Tree:
 
         if neighbor is None:
             return []
-        if len(neighbor.leaf) == 0:
+        if len(neighbor.children) == 0:
             return [neighbor]
-        return neighbor.leaf
+        return neighbor.children
 
     # only support 2d now
     def locate_neighbors_up(self, x1_interval: (int, int),
@@ -266,7 +259,7 @@ class Tree:
                               x2_interval: (int, int), x3_interval: (int, int)):
         """Locate neighbors down."""
         neighbor = None
-        for child in self.leaf:
+        for child in self.children:
             if child is not None:
                 child_x1s, child_x1e = child.size.x1min, child.size.x1max
                 child_x2s, child_x2e = child.size.x2min, child.size.x2max
@@ -285,10 +278,10 @@ class Tree:
 
         return neighbor
 
-    def get_leaf(self, ox1: int, ox2: int = 0, ox3: int = 0) -> Optional[Self]:
-        """Get the leaf block."""
-        leaf_index = ox1 + ox2 * 2 + ox3 * 4
-        return self.leaf[leaf_index]
+    def get_child(self, ox1: int, ox2: int = 0, ox3: int = 0) -> Optional[Self]:
+        """Get the child block."""
+        child_index = ox1 + ox2 * 2 + ox3 * 4
+        return self.children[child_index]
 
     def create_tree(self) -> None:
         """Create the tree."""
@@ -300,21 +293,24 @@ class Tree:
 
         self.split_block(refine=False)
 
-        for leaf in self.leaf:
-            if leaf is not None:
-                leaf.create_tree()
+        for child in self.children:
+            if child is not None:
+                child.create_tree()
 
     def print_tree(self) -> None:
         """Print the tree."""
         print(self)
-        for leaf in self.leaf:
-            if leaf is not None:
-                leaf.print_tree()
+        for child in self.children:
+            if child is not None:
+                child.print_tree()
 
     def __str__(self):
         """Return a string representation of the node."""
-        return f"\nlevel={self.level}\nsize={self.size}\n" + \
-               f"lx1={bin(self.lx1)},lx2={bin(self.lx2)},lx3={bin(self.lx3)}\nleaves={self.leaf}\n"
+        return f"\nlevel={self.level}: " + \
+               f"lx3={str(bin(self.lx3))[2:]}, " + \
+               f"lx2={str(bin(self.lx2))[2:]}, " + \
+               f"lx1={str(bin(self.lx1))[2:]}\n" + \
+               f"size={self.size}\nchildren={self.children}"
 
 
 if __name__ == "__main__":
@@ -324,18 +320,18 @@ if __name__ == "__main__":
     root.create_tree()
 
     print("\n\n===== split block =====")
-    root.leaf[3].leaf[1].split_block()
-    print(root.leaf[1].leaf[0])
+    root.children[3].children[1].split_block()
+    print(root.children[1].children[0])
 
-    n1 = root.leaf[3].leaf[1].leaf[0]
+    n1 = root.children[3].children[1].children[0]
 
     print("\n\n===== split block chain =====")
 
     n1.split_block()
 
-    n1.leaf[0].split_block()
+    n1.children[0].split_block()
 
-    root.leaf[0].leaf[0].split_block()
+    root.children[0].children[0].split_block()
 
     root.print_tree()
     # print(root.leaf[3].leaf[1].leaf[0])
