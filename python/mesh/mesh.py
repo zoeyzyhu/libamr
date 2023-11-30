@@ -3,7 +3,7 @@
 
 import ray
 from typing_extensions import Self
-from .meshblock_tree import MeshBlockTree
+from .tree import Tree
 from .region_size import RegionSize
 
 
@@ -11,12 +11,12 @@ from .region_size import RegionSize
 class Mesh:
     """A class representing a mesh."""
 
-    def __init__(self, tree: MeshBlockTree, coordinate_type: str, nghost: int):
+    def __init__(self, tree: Tree, coordinate_type: str, nghost: int):
         """Initialize Mesh with tree, coordinate type, and optional ghost zones."""
         mblocks = []
 
 
 if __name__ == "__main__":
     rs = RegionSize(x1dim=(0, 120., 8), x2dim=(0, 120., 4))
-    tree = MeshBlockTree(rs)
+    tree = Tree(rs)
     mesh = Mesh(tree, "cartesian", 1)
