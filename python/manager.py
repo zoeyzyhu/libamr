@@ -3,8 +3,7 @@
 
 import ray
 from typing_extensions import Self
-from .tree import Tree
-from .region_size import RegionSize
+import mesh as me
 
 
 @ray.remote

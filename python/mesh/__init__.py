@@ -3,10 +3,11 @@ A simple package: description to fill.
 
 This package provides functionality...
 """
-from .coordinate_factory import CoordinateFactory
-from .coordinates import Coordinates
-from .meshblock import MeshBlock
-from .tree import Tree
+
 from .region_size import RegionSize
+from .coordinates import Coordinates
+from .coordinate_factory import CoordinateFactory
+from .tree import Tree
+from .meshblock import MeshBlock
 
 print("Importing `Meshblock` module!")

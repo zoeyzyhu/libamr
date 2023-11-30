@@ -83,7 +83,7 @@ repos:
         description: Formats Python code to conform to the PEP 8 style guide
         language: python
         args: [-i]
-        exclude: ^(python/tests/test_actor.py)$
+        exclude: ^(python/tests/.*.py)$
 
   ## C/C++ related -----------------------------------------------------------
 
