@@ -5,21 +5,21 @@
 import sys
 import ray
 sys.path.append('../')
-import meshblock as mb
+import mesh as me
 
-ray.init(runtime_env={"py_modules": [mb]})
+ray.init(runtime_env={"py_modules": [me]})
 
 
 @ray.remote
 def test_my_module():
     """Accessing module functions on remote nodes."""
-    mb.MeshBlockTree.set_block_size(nx1=2, nx2=2, nx3=1)
-    rs = mb.RegionSize(x1dim=(0, 120., 4), x2dim=(0, 120., 4))
-    root = mb.MeshBlockTree(rs)
+    me.Tree.set_block_size(nx1=2, nx2=2, nx3=1)
+    rs = me.RegionSize(x1dim=(0, 120., 4), x2dim=(0, 120., 4))
+    root = me.Tree(rs)
     root.create_tree()
     root.print_tree()
 
-    block = mb.MeshBlock(rs, "cartesian", nghost=1)
+    block = me.MeshBlock(rs, "cartesian", nghost=1)
     block.allocate().fill_random()
     block.print_data()
 

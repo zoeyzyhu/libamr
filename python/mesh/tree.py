@@ -1,5 +1,5 @@
-# pylint: disable = import-error, too-many-arguments, too-many-locals, redefined-outer-name, too-many-boolean-expressions,too-many-branches,undefined-variable, fixme
-"""MeshBlockTree class and related functions."""
+# pylint: disable = import-error, cyclic-import, too-many-arguments, too-many-locals, redefined-outer-name, too-many-boolean-expressions,too-many-branches,undefined-variable, fixme
+"""Tree class and related functions."""
 
 from math import floor, log2
 from typing import Optional
@@ -8,7 +8,7 @@ from .region_size import RegionSize
 from .meshblock import MeshBlock
 
 
-class MeshBlockTree:
+class Tree:
     """A class representing a mesh block tree."""
 
     max_num_leaves = 8
@@ -17,10 +17,10 @@ class MeshBlockTree:
     @staticmethod
     def set_block_size(nx1: int, nx2: int = 1, nx3: int = 1) -> None:
         """Set the block size."""
-        MeshBlockTree.block_size = (nx1, nx2, nx3)
+        Tree.block_size = (nx1, nx2, nx3)
 
     def __init__(self, size: RegionSize, lx1: int = 0, lx2: int = 0, lx3: int = 0, parent=None):
-        """Initialize MeshBlockTree with size, level, and optional parent."""
+        """Initialize Tree with size, level, and optional parent."""
         self.size = size
         self.lx1 = lx1
         self.lx2 = lx2
@@ -34,9 +34,9 @@ class MeshBlockTree:
 
     def generate_leaf(self, ox1: int = 0, ox2: int = 0, ox3: int = 0) -> Optional[Self]:
         """Generate a leaf block without refinement."""
-        nb1 = self.size.nx1 // MeshBlockTree.block_size[0]
-        nb2 = self.size.nx2 // MeshBlockTree.block_size[1]
-        nb3 = self.size.nx3 // MeshBlockTree.block_size[2]
+        nb1 = self.size.nx1 // Tree.block_size[0]
+        nb2 = self.size.nx2 // Tree.block_size[1]
+        nb3 = self.size.nx3 // Tree.block_size[2]
 
         if (ox1 == 1 and nb1 == 1) or \
            (ox2 == 1 and nb2 == 1) or \
@@ -49,7 +49,7 @@ class MeshBlockTree:
         x1min = self.size.x1min
         x1max = self.size.x1max
         dx1 = (self.size.x1max - self.size.x1min) / self.size.nx1
-        nx1 = 2 ** floor(log2(nb1)) * MeshBlockTree.block_size[0]
+        nx1 = 2 ** floor(log2(nb1)) * Tree.block_size[0]
         # even split
         if nx1 == self.size.nx1 and nb1 > 1:
             nx1 = self.size.nx1 // 2
@@ -62,7 +62,7 @@ class MeshBlockTree:
         x2min = self.size.x2min
         x2max = self.size.x2max
         dx2 = (self.size.x2max - self.size.x2min) / self.size.nx2
-        nx2 = 2 ** floor(log2(nb2)) * MeshBlockTree.block_size[1]
+        nx2 = 2 ** floor(log2(nb2)) * Tree.block_size[1]
         # even split
         if nx2 == self.size.nx2 and nb2 > 1:
             nx2 = self.size.nx2 // 2
@@ -75,7 +75,7 @@ class MeshBlockTree:
         x3min = self.size.x3min
         x3max = self.size.x3max
         dx3 = (self.size.x3max - self.size.x3min) / self.size.nx3
-        nx3 = 2 ** floor(log2(nb3)) * MeshBlockTree.block_size[2]
+        nx3 = 2 ** floor(log2(nb3)) * Tree.block_size[2]
         # even split
         if nx3 == self.size.nx3 and nb3 > 1:
             nx3 = self.size.nx3 // 2
@@ -93,7 +93,7 @@ class MeshBlockTree:
         lx2 = self.lx2 * 2 + ox2
         lx3 = self.lx3 * 2 + ox3
 
-        return MeshBlockTree(rs, lx1, lx2, lx3, self)
+        return Tree(rs, lx1, lx2, lx3, self)
 
     def generate_leaf_refine(self, ox1: int = 0, ox2: int = 0, ox3: int = 0) -> Self:
         """Generate a leaf block with refinement."""
@@ -128,7 +128,7 @@ class MeshBlockTree:
         lx2 = self.lx2 * 2 + ox2
         lx3 = self.lx3 * 2 + ox3
 
-        return MeshBlockTree(rs, lx1, lx2, lx3, self)
+        return Tree(rs, lx1, lx2, lx3, self)
 
     def split_block(self, refine=True) -> None:
         """Split the block into 8 sub-blocks."""
@@ -177,8 +177,34 @@ class MeshBlockTree:
     def find_node(self, mblock: MeshBlock) -> Optional[Self]:
         """Find the node that contains the mesh block."""
 
+    def find_node_by_coord(self, x1: int, x2: int, x3: int) -> Optional[Self]:
+        """Find the node that contains the coordinate using binary search along each axis."""
+        # Check if the coordinates are within the bounds of this node
+        if not (self.size.x1min <= x1 <= self.size.x1max and
+                self.size.x2min <= x2 <= self.size.x2max and
+                self.size.x3min <= x3 <= self.size.x3max):
+            return None
+
+        # If this node has no leaves, it is a leaf node, return itself
+        if not self.leaf:
+            return self
+
+        # Binary search along each axis
+        ox1 = 0 if x1 <= (self.size.x1min + self.size.x1max) / 2 else 1
+        ox2 = 0 if x2 <= (self.size.x2min + self.size.x2max) / 2 else 1
+        ox3 = 0 if x3 <= (self.size.x3min + self.size.x3max) / 2 else 1
+
+        # Determine the child node index based on the binary search results
+        leaf_index = ox1 + ox2 * 2 + ox3 * 4
+
+        # Recursively search through the child node
+        if self.leaf[leaf_index] is not None:
+            return self.leaf[leaf_index].find_node_by_coord(x1, x2, x3)
+
+        return None  # Should not reach here in a properly constructed tree
+
     # TODO: implement this
-    def find_neighbors(self, cubic_offset: (int, int, int)) -> [Self]:
+    def find_neighbors(self, cubic_offsets: (int, int, int)) -> [Self]:
         """Find neighbors of the block."""
         # 0, 1, 2, 3 represent left, right, up, down, if it is on board, return None
 
@@ -189,7 +215,7 @@ class MeshBlockTree:
 
     def create_tree(self) -> None:
         """Create the tree."""
-        nx1, nx2, nx3 = MeshBlockTree.block_size
+        nx1, nx2, nx3 = Tree.block_size
         if self.size.nx3 % nx3 != 0 or \
            self.size.nx2 % nx2 != 0 or \
            self.size.nx1 % nx1 != 0:
@@ -215,9 +241,9 @@ class MeshBlockTree:
 
 
 if __name__ == "__main__":
-    MeshBlockTree.set_block_size(nx1=2, nx2=2, nx3=1)
+    Tree.set_block_size(nx1=2, nx2=2, nx3=1)
     rs = RegionSize(x1dim=(0, 120., 8), x2dim=(0, 120., 4))
-    root = MeshBlockTree(rs)
+    root = Tree(rs)
     root.create_tree()
     root.print_tree()
 

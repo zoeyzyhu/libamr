@@ -1,10 +1,14 @@
+async_timeout
 clang-format
 cmake
 cpplint
 numpy
 pre-commit
+psutil
+py-spy
 pylint
-ray
+ray[default]
+scipy
 twine
 typing-extensions
 wheel
