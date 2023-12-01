@@ -51,10 +51,20 @@ class RegionSize:
 
         o3, o2, o1 = offsets
         si, ei = get_range(self.nx1, self.nc1, o1)
-        sj, ej = get_range(self.nx2, self.nc2,
-                           o2) if self.nx2 > 1 else (0, 1)
-        sk, ek = get_range(self.nx3, self.nc3,
-                           o3) if self.nx3 > 1 else (0, 1)
+
+        if self.nx2 > 1:
+            sj, ej = get_range(self.nx2, self.nc2, o2)
+        elif o2 == 0:
+            sj, ej = 0, 1
+        else:
+            sj, ej = 0, 0
+
+        if self.nx3 > 1:
+            sk, ek = get_range(self.nx3, self.nc3, o3)
+        elif o3 == 0:
+            sk, ek = 0, 1
+        else:
+            sk, ek = 0, 0
 
         return si, ei, sj, ej, sk, ek
 

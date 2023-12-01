@@ -55,23 +55,26 @@ class MeshBlockActor:
         if len(neighbors) > 1:  # neighbors at finer level
             tasks = [nb.get_view_restrict.remote(nb_offsets, self.mblock.coord)
                 for nb in neighbors]
-        elif neighbors[0].level < self.level:  # neighbors at coarser level
+        elif ray.get(neighbors[0].get_level.remote()) < self.level:  # neighbors at coarser level
             tasks = [neighbors[0].get_view_prolong.remote(nb_offsets, self.mblock.coord)]
         else:  # neighbors at same level
             tasks = [neighbors[0].get_view.remote(nb_offsets)]
 
-        ready_tasks, remain_tasks = ray.wait(tasks)
+        #ready_tasks, remain_tasks = ray.wait(tasks)
 
-        for task in ready_tasks:
-            view, level, logicloc = ray.get(task)
-            if level <= self.level:
-                self.mblock.ghost[offsets][:] = view
-            elif level > self.level:
-                self.mblock.part(offsets, logicloc)[:] = view
-            else:
-                self.mblock.ghost[offsets][:] = view
+        while len(tasks) > 0:
+            ready_tasks, remain_tasks = ray.wait(tasks)
+            tasks = remain_tasks
+            for task in ready_tasks:
+                view, level, logicloc = ray.get(task)
+                if level is None:
+                    self.mblock.ghost[offsets][:] = view
+                elif level and level <= self.level:
+                    self.mblock.ghost[offsets][:] = view
+                elif level and level > self.level:
+                    self.mblock.part(offsets, logicloc)[:] = view
 
-        return remain_tasks
+        return
 
     def get_data(self) -> (me.MeshBlock, me.RegionSize, int):
         """Print the mesh block."""
@@ -90,6 +93,10 @@ class MeshBlockActor:
     def set_neighbor(self, offsets, neighbors: [ObjectRef]) -> None:
         """Set the neighbors of the mesh block."""
         self.neighbors[offsets] = neighbors
+    
+    def get_level(self) -> int:
+        """Get the level of the mesh block."""
+        return self.level
 
 def update_neighbors(actors: dict[(int,int,int), ObjectRef],
                      root: me.Tree) -> None:
@@ -98,13 +105,16 @@ def update_neighbors(actors: dict[(int,int,int), ObjectRef],
             for o2 in [-1, 0, 1]:
                 for o1 in [-1, 0, 1]:
                     offsets = (o3, o2, o1)
+
                     center, coord = ray.get(actor.get_center.remote())
                     node = root.find_node(center)
-                    for nb in node.neighbors(offsets, coord):
-                        if nb is None:
-                            continue
-                        ll = (nb.lx3, nb.lx2, nb.lx1)
-                        actor.set_neighbor.remote(offsets, actors[ll])
+                    neighbors = node.get_neighbors(offsets, coord)
+
+                    neighbor_actors = [
+                        actors[(nb.lx3, nb.lx2, nb.lx1)] for nb in neighbors
+                    ]
+                    
+                    actor.set_neighbor.remote(offsets, neighbor_actors)
 
 def launch_actors(root: me.Tree) -> dict[(int,int,int), MeshBlockActor]:
     """Launch actors based on the tree."""

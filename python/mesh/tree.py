@@ -206,20 +206,21 @@ class Tree:
 
         return None
 
-    def neighbors(self, offsets: (int, int, int), coord: Coordinates) -> Self:
+    def get_neighbors(self, offsets: (int, int, int), coord: Coordinates) -> Self:
         """neighbor generator of the block."""
         si, ei, sj, ej, sk, ek = self.size.ghost_range(offsets)
         neighbors = []
+        root = self.root()
 
         for k in range(sk, ek):
             for j in range(sj, ej):
                 for i in range(si, ei):
                     point = coord.x3v[k], coord.x2v[j], coord.x1v[i]
-                    nb = self.root().find_node(point)
-                    #print(f"point = {point}, nb = {nb}")
+                    nb = root.find_node(point)
                     if nb is not None and nb not in neighbors:
                         neighbors.append(nb)
-                        yield nb
+
+        return neighbors
 
 
     def create_tree(self) -> None:

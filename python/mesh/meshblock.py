@@ -151,6 +151,7 @@ class MeshBlock:
 
         of3, of2, of1 = logicloc
         si, sj, sk = si + of1 * len1, sj + of2 * len2, sk + of3 * len3
+        print(f"si={si}, sj={sj}, sk={sk}")
 
         byte = self.data.itemsize
         view = as_strided(
