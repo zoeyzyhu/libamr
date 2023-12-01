@@ -8,7 +8,7 @@ import numpy as np
 from numpy.lib.stride_tricks import as_strided
 from scipy.interpolate import interpn
 from .region_size import RegionSize
-from .coordinate_factory import CoordinateFactory
+from .coordinates_factory import CoordinateFactory
 from .coordinates import Coordinates
 
 
@@ -77,7 +77,6 @@ class MeshBlock:
     def fill_random(self) -> Self:
         """Fill interior zones with random values."""
         self.data.fill(-1)
-        np.random.seed(0)
         self.ghost[(0, 0, 0)][:] = np.random.uniform(0, 1, size=(
             self.size.nx3, self.size.nx2, self.size.nx1, self.size.nvar))
         return self
