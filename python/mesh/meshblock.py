@@ -8,7 +8,7 @@ import numpy as np
 from numpy.lib.stride_tricks import as_strided
 from scipy.interpolate import interpn
 from .region_size import RegionSize
-from .coordinate_factory import CoordinateFactory
+from .coordinates_factory import CoordinateFactory
 from .coordinates import Coordinates
 
 

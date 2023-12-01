@@ -4,8 +4,10 @@
 from math import floor, log2
 from typing import Optional
 from typing import Tuple
+from typing import List
 from typing_extensions import Self
 from .region_size import RegionSize
+from .meshblock import MeshBlock
 
 
 class Tree:
@@ -191,7 +193,70 @@ class Tree:
     def merge_blocks(self):
         """Merge children blocks into a parent block."""
 
-    def find_neighbors(self, cubic_offset: (int, int, int)) -> [Self]:
+    def calculate_intervals1(self, cubic_offset: Tuple[int, int, int]) -> Tuple[Tuple[int, int], Tuple[int, int], Tuple[int, int]]:
+        """Calculate x intervals based on cubic offset."""
+        x1_ghost = (self.size.x1max - self.size.x1min) / \
+            self.size.nx1 * self.size.nghost
+        x2_ghost = (self.size.x2max - self.size.x2min) / \
+            self.size.nx2 * self.size.nghost
+        x3_ghost = (self.size.x3max - self.size.x3min) / \
+            self.size.nx3 * self.size.nghost
+
+        x1_interval = self.calculate_interval(
+            self.size.x1min, self.size.x1max, cubic_offset[2], x1_ghost)
+        x2_interval = self.calculate_interval(
+            self.size.x2min, self.size.x2max, cubic_offset[1], x2_ghost)
+        x3_interval = self.calculate_interval(
+            self.size.x3min, self.size.x3max, cubic_offset[0], x3_ghost)
+
+        return x1_interval, x2_interval, x3_interval
+
+    def calculate_interval1(self, min_val: int, max_val: int, offset: int, ghost: float) -> Tuple[int, int]:
+        """Calculate interval based on offset and ghost."""
+        if offset == 0:
+            return min_val, max_val
+        elif offset == 1:
+            return max_val, max_val + ghost
+        else:
+            return min_val - ghost, min_val
+
+    def calculate_intervals(self, cubic_offset: Tuple[int, int, int]) -> Tuple[Tuple[int, int], Tuple[int, int], Tuple[int, int]]:
+        """Calculate x intervals based on cubic offset."""
+        self_x1s, self_x1e = self.size.x1min, self.size.x1max
+        self_x2s, self_x2e = self.size.x2min, self.size.x2max
+        self_x3s, self_x3e = self.size.x3min, self.size.x3max
+
+        x1_interval = x2_interval = x3_interval = None
+
+        x1_ghost = (self_x1e - self_x1s) / self.size.nx1 * self.size.nghost
+        x2_ghost = (self_x2e - self_x2s) / self.size.nx2 * self.size.nghost
+        x3_ghost = (self_x3e - self_x3s) / self.size.nx3 * self.size.nghost
+
+        if cubic_offset[0] == 0:
+            x3_interval = (self_x3s, self_x3e)
+        elif cubic_offset[0] == 1:
+            x3_interval = (self_x3e, self_x3e + x3_ghost)
+        else:
+            x3_interval = (self_x3s - x3_ghost, self_x3s)
+
+        if cubic_offset[1] == 0:
+            x2_interval = (self_x2s, self_x2e)
+        elif cubic_offset[1] == 1:
+            x2_interval = (self_x2e, self_x2e + x2_ghost)
+        else:
+            x2_interval = (self_x2s - x2_ghost, self_x2s)
+
+        if cubic_offset[2] == 0:
+            x1_interval = (self_x1s, self_x1e)
+        elif cubic_offset[2] == 1:
+            x1_interval = (self_x1e, self_x1e + x1_ghost)
+        else:
+            x1_interval = (self_x1s - x1_ghost, self_x1s)
+
+        return x1_interval, x2_interval, x3_interval
+
+    def find_neighbors(self, 
+                       cubic_offset: (int, int, int)) -> [Self]:
         """Find neighbors of the block."""
         # -1, 0, 1 represent left, mid, right on viewpoint
         self_x1s, self_x1e = self.size.x1min, self.size.x1max
@@ -278,6 +343,24 @@ class Tree:
 
         return neighbor
 
+    def find_root(self) -> Self:
+        """Find the root of the tree."""
+        node = self
+        while node.parent:
+            node = node.parent
+        return node
+
+    def relocate_neighbors(self, root: Self, offsets: (int, int, int)) -> List[Self]:
+        """Relocate the node in case tree outdated."""
+        intervals = self.calculate_intervals(offsets)
+        neighbor = root.locate_neighbors_down(*intervals)
+
+        if neighbor is None:
+            return []
+        if len(neighbor.children) == 0:
+            return [neighbor]
+        return neighbor.children
+
     def get_child(self, ox1: int, ox2: int = 0, ox3: int = 0) -> Optional[Self]:
         """Get the child block."""
         child_index = ox1 + ox2 * 2 + ox3 * 4
@@ -338,3 +421,5 @@ if __name__ == "__main__":
     # print(root.leaf[3].leaf[1].leaf[1])
     # print(root.leaf[3].leaf[1].leaf[2])
     # print(root.leaf[3].leaf[1].leaf[3])
+    node = root.children[3].children[1].find_root()
+    print(node)
