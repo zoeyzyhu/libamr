@@ -8,7 +8,7 @@ import actor as ac
 def test_launch_actors(tree):
     print("\n===== Test launch actors =====")
     actors = ac.launch_actors(tree)
-    #ac.print_actors(actors)
+    ac.print_actors(actors)
     return actors
 
 def test_refine_actors(tree, actors):
@@ -20,7 +20,7 @@ def test_refine_actors(tree, actors):
     ray.kill(actors[1])
     new_actors = ac.launch_actors(node_to_refine)
     actors = actors[:1] + new_actors + actors[2:]
-    #ac.print_actors(actors)
+    ac.print_actors(actors)
     return actors
 
 def test_put_data(actors):
@@ -28,7 +28,6 @@ def test_put_data(actors):
     data_refs = []
     for actor in actors:
         data_refs.append(ray.get(actor.put_data.remote()))
-        ray.kill(actor)
 
     new_actors = []
     for data_ref in data_refs:
@@ -73,9 +72,9 @@ if __name__ == '__main__':
     actors = test_launch_actors(tree)
     actors = test_refine_actors(tree, actors)
     tree.print_tree()
-    #test_put_data(actors)
-    test_locate_neighbors(actors[1], tree, (0, 1, 1))
-    test_locate_neighbors(actors[0], tree, (0, 0, 1))
+    test_put_data(actors)
+    #test_locate_neighbors(actors[1], tree, (0, 1, 1))
+    #test_locate_neighbors(actors[0], tree, (0, 0, 1))
     #test_update_ghost(actors[1], (0, 1, 1))
 
 

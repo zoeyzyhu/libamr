@@ -7,6 +7,7 @@ from typing import Tuple
 from typing import List
 from typing_extensions import Self
 from .region_size import RegionSize
+from .meshblock import MeshBlock
 
 
 class Tree:
@@ -254,7 +255,8 @@ class Tree:
 
         return x1_interval, x2_interval, x3_interval
 
-    def find_neighbors(self, cubic_offset: (int, int, int)) -> [Self]:
+    def find_neighbors(self, 
+                       cubic_offset: (int, int, int)) -> [Self]:
         """Find neighbors of the block."""
         # -1, 0, 1 represent left, mid, right on viewpoint
         self_x1s, self_x1e = self.size.x1min, self.size.x1max

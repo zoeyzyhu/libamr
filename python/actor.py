@@ -15,19 +15,19 @@ class MeshBlockActor:
 
     def __init__(self) -> None:
         """Initialize MeshBlockActor."""
-        self.node = None
+        self.size = None
         self.mblock = None
 
-    def new(self, node: me.Tree, coordinate_type: str = "cartesian") -> None:
+    def new(self, size: me.RegionSize, coordinate_type: str = "cartesian") -> None:
         """Initialize MeshBlockActor from its tree node."""
-        self.node = node
-        self.mblock = me.MeshBlock(self.node.size, coordinate_type)
+        self.size = size
+        self.mblock = me.MeshBlock(self.size, coordinate_type)
         self.mblock.allocate().fill_random()
 
     def relaunch(self, data_ref: List[ObjectRef]) -> None:
         """Restart MeshBlockActor from its tree node."""
         data = ray.get(data_ref[0])
-        self.node = data.node
+        self.size = data.size
         self.mblock = data.mblock
 
     def put_data(self):
@@ -92,7 +92,7 @@ class MeshBlockActor:
         """Print the mesh block."""
         node_id = ray.get_runtime_context().get_node_id()
         worker_id = ray.get_runtime_context().get_worker_id()
-        return self.node.size, self.mblock, node_id, worker_id
+        return self.size, self.mblock, node_id, worker_id
 
 
 def launch_actors(node: me.Tree) -> List[MeshBlockActor]:
@@ -100,14 +100,13 @@ def launch_actors(node: me.Tree) -> List[MeshBlockActor]:
     actors = []
     if not node.children:
         actor = MeshBlockActor.remote()
-        actor.new.remote(node)
+        actor.new.remote(node.size)
         actors.append(actor)
     else:
         for child in node.children:
             if child:
                 actors.extend(launch_actors(child))
     return actors
-
 
 def print_actors(actors: List[MeshBlockActor]) -> None:
     """Print the mesh block."""
