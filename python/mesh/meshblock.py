@@ -77,37 +77,18 @@ class MeshBlock:
     def fill_random(self) -> Self:
         """Fill interior zones with random values."""
         self.data.fill(-1)
-        np.random.seed(0)
+        #np.random.seed(seed) # remove me after testing
         self.ghost[(0, 0, 0)][:] = np.random.uniform(0, 1, size=(
             self.size.nx3, self.size.nx2, self.size.nx1, self.size.nvar))
         return self
 
-    def ghost_range(self, offsets: (int, int, int)) -> tuple[int]:
-        """Return the range of ghost zone specified by the cubic offsets."""
-        def get_range(nx, nc, offset):
-            if offset == -1:
-                start, end = 0, self.size.nghost
-            elif offset == 0:
-                start, end = self.size.nghost, nx + self.size.nghost
-            else:
-                start, end = nx + self.size.nghost, nc
-            return start, end
-
-        o3, o2, o1 = offsets
-        si, ei = get_range(self.size.nx1, self.size.nc1, o1)
-        sj, ej = get_range(self.size.nx2, self.size.nc2,
-                           o2) if self.size.nx2 > 1 else (0, 1)
-        sk, ek = get_range(self.size.nx3, self.size.nc3,
-                           o3) if self.size.nx3 > 1 else (0, 1)
-
-        return si, ei, sj, ej, sk, ek
 
     def prolongated_view(self, my_offsets: (int, int, int),
                          finer: Coordinates) -> np.ndarray:
         """Prolongate a view to a finer mesh block."""
         # Extract finer block coordinates
         finer_offsets = tuple(-x for x in my_offsets)
-        si, ei, sj, ej, sk, ek = self.ghost_range(finer_offsets)
+        si, ei, sj, ej, sk, ek = self.size.ghost_range(finer_offsets)
         gx1v, gx2v, gx3v = finer.x1v[si:ei], finer.x2v[sj:ej], finer.x3v[sk:ek]
 
         # Create coordinates for interpolation
@@ -127,11 +108,11 @@ class MeshBlock:
         """Restrict a view to a coarser mesh block."""
         # Extract coordinates for the coarser mesh block from the finer
         coarser_offsets = tuple(-x for x in my_offsets)
-        si, ei, sj, ej, sk, ek = self.ghost_range(coarser_offsets)
+        si, ei, sj, ej, sk, ek = self.size.ghost_range(coarser_offsets)
         gx1v, gx2v, gx3v = coarser.x1v[si:ei], coarser.x2v[sj:ej], coarser.x3v[sk:ek]
 
         # Find indices for self interior points
-        isi, iei, isj, iej, isk, iek = self.ghost_range((0, 0, 0))
+        isi, iei, isj, iej, isk, iek = self.size.ghost_range((0, 0, 0))
 
         # Find the assemble_ of coarser mesh block that is inside the self mesh block
         si = bisect(gx1v, self.coord.x1v[isi])
@@ -158,7 +139,7 @@ class MeshBlock:
 
     def part(self, offsets: (int, int, int), logicloc: (int, int, int)) -> np.ndarray:
         """Extract a part of the ghost zone during restriction."""
-        si, _, sj, _, sk, _ = self.ghost_range(offsets)
+        si, _, sj, _, sk, _ = self.size.ghost_range(offsets)
 
         o3, o2, o1 = offsets
         len1 = self.size.nx1 // 2 if o1 == 0 else self.size.nghost

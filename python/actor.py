@@ -1,13 +1,10 @@
 # pylint: disable = import-error, too-many-arguments, undefined-variable, unused-argument, redefined-outer-name, too-few-public-methods, no-member, pointless-string-statement
 """Module containing MeshBlockActor class and related functions."""
 
-from typing import List
-from typing import Tuple
 import ray
 from ray import ObjectRef
 import numpy as np
 import mesh as me
-
 
 @ray.remote
 class MeshBlockActor:
@@ -16,13 +13,18 @@ class MeshBlockActor:
     def __init__(self) -> None:
         """Initialize MeshBlockActor."""
         self.mblock = None
+        self.level = 0
+        self.logicloc = (0,0,0)
+        self.neighbors = {}
 
-    def new(self, size: me.RegionSize, coordinate_type: str = "cartesian") -> None:
+    def new(self, node: me.Tree, coordinate_type: str = "cartesian") -> None:
         """Initialize MeshBlockActor from its tree node."""
-        self.mblock = me.MeshBlock(size, coordinate_type)
+        self.mblock = me.MeshBlock(node.size, coordinate_type)
         self.mblock.allocate().fill_random()
+        self.level = node.level
+        self.logicloc = node.lx3, node.lx2, node.lx1
 
-    def relaunch(self, data_ref: List[ObjectRef]) -> None:
+    def relaunch(self, data_ref: [ObjectRef]) -> None:
         """Restart MeshBlockActor from its tree node."""
         self.mblock = ray.get(data_ref[0])
 
@@ -38,78 +40,99 @@ class MeshBlockActor:
     def get_view_prolong(self, my_offsets: (int, int, int),
                          finer: me.Coordinates) -> np.ndarray:
         """Get the view of the mesh block with prolongation."""
-        logicloc = (self.node.lx3 % 2, self.node.lx2 % 2, self.node.lx1 % 2)
-        level = self.node.level
-        return self.mblock.prolongated_view(my_offsets, finer), level, logicloc
+        return self.mblock.prolongated_view(my_offsets, finer), self.level, self.logicloc
 
     def get_view_restrict(self, my_offsets: (int, int, int),
                           coarser: me.Coordinates) -> np.ndarray:
         """Get the view of the mesh block with restriction."""
-        logicloc = (self.node.lx3 % 2, self.node.lx2 % 2, self.node.lx1 % 2)
-        level = self.node.level
-        return self.mblock.restricted_view(my_offsets, coarser), level, logicloc
+        return self.mblock.restricted_view(my_offsets, coarser), self.level, self.logicloc
 
-    def locate_neighbors(self, root: me.Tree, offsets: (int, int, int)) -> ObjectRef:
-        return self.node.relocate_neighbors(root, offsets)
-
-    def update_ghost(self, offsets: (int, int, int)) -> None:
+    def update_ghost(self, offsets: (int, int, int)) -> [ObjectRef]:
         """Update ghost cells."""
-        neighbor_parent = self.node.relocate_neighbors(offsets)
-        neighbors = neighbor_parent.children
-        print(f"!!!!!!!!!!neighbors = {neighbors}")
+        neighbors = self.neighbors[offsets]
+        nb_offsets = tuple(-x for x in offsets)
 
         if len(neighbors) > 1:  # neighbors at finer level
-            tasks = [
-                neighbor.get_view_restrict.remote(-offsets,
-                                                  coarser=self.mblock.coord)
-                for neighbor in neighbors]
-        elif neighbors[0].level < self.mblock.level:  # neighbors at coarser level
-            tasks = [
-                neighbor.get_view_prolong.remote(-offsets, finer=self.mblock.coord)]
+            tasks = [nb.get_view_restrict.remote(nb_offsets, self.mblock.coord)
+                for nb in neighbors]
+        elif neighbors[0].level < self.level:  # neighbors at coarser level
+            tasks = [neighbors[0].get_view_prolong.remote(nb_offsets, self.mblock.coord)]
         else:  # neighbors at same level
-            tasks = [neighbor.get_view.remote(-offsets)]
+            tasks = [neighbors[0].get_view.remote(nb_offsets)]
 
-        while len(tasks) > 0:
-            ready_tasks, remain_tasks = ray.wait(tasks)
-            tasks = remain_tasks
+        ready_tasks, remain_tasks = ray.wait(tasks)
 
-            for task in ready_tasks:
-                view, level, logicloc = ray.get(task)
-                if level and level <= self.mblock.level:
-                    self.mblock.ghost[offsets][:] = view
-                elif level and level > self.mblock.level:
-                    self.mblock.part(offsets, logicloc)[:] = view
-                else:
-                    self.mblock.ghost[offsets][:] = view
+        for task in ready_tasks:
+            view, level, logicloc = ray.get(task)
+            if level <= self.level:
+                self.mblock.ghost[offsets][:] = view
+            elif level > self.level:
+                self.mblock.part(offsets, logicloc)[:] = view
+            else:
+                self.mblock.ghost[offsets][:] = view
 
-        return
+        return remain_tasks
 
-    def get_data(self) -> Tuple[me.MeshBlock, me.RegionSize, int]:
+    def get_data(self) -> (me.MeshBlock, me.RegionSize, int):
         """Print the mesh block."""
         node_id = ray.get_runtime_context().get_node_id()
         worker_id = ray.get_runtime_context().get_worker_id()
-        return self.mblock.size, self.mblock, node_id, worker_id
+        return self.mblock, node_id, worker_id
 
+    def get_neighbors(self) -> dict[(int,int,int), ObjectRef]:
+        """Get the neighbors of the mesh block."""
+        return self.neighbors
 
-def launch_actors(node: me.Tree) -> List[MeshBlockActor]:
+    def get_center(self) -> (float, float, float):
+        """Get the center of the mesh block."""
+        return self.mblock.size.center(), self.mblock.coord
+
+    def set_neighbor(self, offsets, neighbors: [ObjectRef]) -> None:
+        """Set the neighbors of the mesh block."""
+        self.neighbors[offsets] = neighbors
+
+def update_neighbors(actors: dict[(int,int,int), ObjectRef],
+                     root: me.Tree) -> None:
+    for _, actor in actors.items():
+        for o3 in [-1, 0, 1]:
+            for o2 in [-1, 0, 1]:
+                for o1 in [-1, 0, 1]:
+                    offsets = (o3, o2, o1)
+                    center, coord = ray.get(actor.get_center.remote())
+                    node = root.find_node(center)
+                    for nb in node.neighbors(offsets, coord):
+                        if nb is None:
+                            continue
+                        ll = (nb.lx3, nb.lx2, nb.lx1)
+                        actor.set_neighbor.remote(offsets, actors[ll])
+
+def launch_actors(root: me.Tree) -> dict[(int,int,int), MeshBlockActor]:
     """Launch actors based on the tree."""
-    actors = []
-    if not node.children:
+    actors = {}
+    if not root.children:
         actor = MeshBlockActor.remote()
-        actor.new.remote(node.size)
-        actors.append(actor)
+        actor.new.remote(root)
+        actors[(root.lx3,root.lx2,root.lx1)]= actor
     else:
-        for child in node.children:
+        for child in root.children:
             if child:
-                actors.extend(launch_actors(child))
+                actors.update(launch_actors(child))
     return actors
 
-def print_actors(actors: List[MeshBlockActor]) -> None:
+def print_actors(actors: dict[(int,int,int), MeshBlockActor]) -> None:
     """Print the mesh block."""
-    for actor in actors:
-        size, mblock, node_id, worker_id = ray.get(actor.get_data.remote())
-        print(f"\nNode:{node_id}\nWorker:{worker_id}\n{size}")
+    for ll in actors:
+        mblock, node_id, worker_id = ray.get(actors[ll].get_data.remote())
+        print(f"\nNode:{node_id}\nWorker:{worker_id}\nlogicloc:{ll}")
+        print(f"size = {mblock.size}")
         mblock.print_data()
+
+def print_actor(actor: ObjectRef) -> None:
+    """Print the mesh block."""
+    mblock, node_id, worker_id = ray.get(actor.get_data.remote())
+    print(f"\nNode:{node_id}\nWorker:{worker_id}")
+    print(f"size = {mblock.size}")
+    mblock.print_data()
 
 
 if __name__ == '__main__':
