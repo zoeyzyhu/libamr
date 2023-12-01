@@ -18,8 +18,8 @@ def test_refine_actors(tree, actors):
     node_to_refine.split_block()
     #tree.print_tree()
 
-    ray.kill(actors[(0, 0, 1)])
-    actors.pop((0, 0, 1))
+    ray.kill(actors[(0b100, 0b100, 0b101)])
+    actors.pop((0b100, 0b100, 0b101))
     new_actors = ac.launch_actors(node_to_refine)
     #actors.update(new_actors)
     print("=============== Original actors:")
@@ -70,8 +70,7 @@ if __name__ == '__main__':
     me.Tree.set_block_size(nx1=2, nx2=2, nx3=1)
     tree = me.Tree(size)
     tree.create_tree()
-    #tree.print_tree()
-
+    tree.print_tree()
     # Launch actors based on the tree
     ray.init(runtime_env={"py_modules": [me]})
     actors = test_launch_actors(tree)
@@ -79,9 +78,9 @@ if __name__ == '__main__':
     
     actors = test_refine_actors(tree, actors)
     tree.print_tree()
-    test_update_neighbors(actors, tree)
+    #test_update_neighbors(actors, tree)
     #test_update_ghost(actors[(0, 0, 2)], (0, 1, 1))
     #test_update_ghost(actors[(0, 0, 2)], (0, 0, 1))
-    test_update_ghost(actors[(0, 0, 0)], (0, 0, 1))
+    #test_update_ghost(actors[(0, 0, 0)], (0, 0, 1))
 
-    ray.shutdown()
+    

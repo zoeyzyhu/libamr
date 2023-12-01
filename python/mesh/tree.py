@@ -20,7 +20,7 @@ class Tree:
         Tree.block_size = (nx1, nx2, nx3)
 
     def __init__(self, size: RegionSize,
-                 logicloc: (int, int, int) = (0, 0, 0), parent=None):
+                 logicloc: (int, int, int) = (1, 1, 1), parent=None):
         """Initialize Tree with size, level, and optional parent."""
         self.size = size
         self.lx3, self.lx2, self.lx1 = logicloc
