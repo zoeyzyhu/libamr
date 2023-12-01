@@ -78,9 +78,10 @@ if __name__ == '__main__':
     
     actors = test_refine_actors(tree, actors)
     tree.print_tree()
-    #test_update_neighbors(actors, tree)
+    test_update_neighbors(actors, tree)
     #test_update_ghost(actors[(0, 0, 2)], (0, 1, 1))
     #test_update_ghost(actors[(0, 0, 2)], (0, 0, 1))
     #test_update_ghost(actors[(0, 0, 0)], (0, 0, 1))
+    test_update_ghost(actors[(0b100, 0b110, 0b110)], (0, -1, -1))
 
     

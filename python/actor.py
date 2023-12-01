@@ -14,7 +14,7 @@ class MeshBlockActor:
         """Initialize MeshBlockActor."""
         self.mblock = None
         self.level = 0
-        self.logicloc = (0,0,0)
+        self.logicloc = (1,1,1)
         self.neighbors = {}
 
     def new(self, node: me.Tree, coordinate_type: str = "cartesian") -> None:
