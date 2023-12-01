@@ -1,6 +1,7 @@
 # pylint: disable = too-many-instance-attributes, too-many-arguments
 """This module contains the RegionSize class."""
 
+from typing import Tuple
 
 class RegionSize:
     """A class for representing the size of a multidimensional block."""
@@ -38,7 +39,8 @@ class RegionSize:
                 (self.x2max + self.x2min) / 2.,
                 (self.x1max + self.x1min) / 2.)
 
-    def ghost_range(self, offsets: (int, int, int)) -> tuple[int]:
+    def ghost_range(self, offsets: Tuple[int, int, int]
+                    ) -> Tuple[int, int, int, int, int, int]:
         """Return the range of ghost zone specified by the cubic offsets."""
         def get_range(nx, nc, offset):
             if offset == -1:
@@ -55,8 +57,10 @@ class RegionSize:
         if self.nx2 > 1:
             sj, ej = get_range(self.nx2, self.nc2, o2)
         elif o2 == 0:
+            # No split in this dimension: full range (0)
             sj, ej = 0, 1
         else:
+            # No data in this dimension for -1 or 1: empty
             sj, ej = 0, 0
 
         if self.nx3 > 1:

@@ -206,7 +206,7 @@ class Tree:
 
         return None
 
-    def get_neighbors(self, offsets: (int, int, int), coord: Coordinates) -> Self:
+    def find_neighbors(self, offsets: (int, int, int), coord: Coordinates) -> Self:
         """neighbor generator of the block."""
         si, ei, sj, ej, sk, ek = self.size.ghost_range(offsets)
         neighbors = []
