@@ -51,6 +51,7 @@ def test_update_ghost(actor, offsets):
     print("\n===== Test update ghost =====")
     print("----- Before update ghost -----")
     ac.print_actor(actor)
+    print(f"offsets = {offsets}")
     actor.update_ghost.remote(offsets)
     print("----- Updated ghost -----")
     ac.print_actor(actor)
@@ -73,6 +74,7 @@ if __name__ == '__main__':
     actors = test_refine_actors(tree, actors)
     test_update_neighbors(actors, tree)
     #test_update_ghost(actors[(0, 0, 2)], (0, 1, 1))
-
+    #test_update_ghost(actors[(0, 0, 2)], (0, 0, 1))
+    test_update_ghost(actors[(0, 0, 0)], (0, 0, 1))
 
     ray.shutdown()
