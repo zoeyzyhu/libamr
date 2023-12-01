@@ -21,7 +21,13 @@ def test_refine_actors(tree, actors):
     ray.kill(actors[(0, 0, 1)])
     actors.pop((0, 0, 1))
     new_actors = ac.launch_actors(node_to_refine)
+    #actors.update(new_actors)
+    print("=============== Original actors:")
+    ac.print_actors(actors)
+    print("=============== New actors:")
+    ac.print_actors(new_actors)
     actors.update(new_actors)
+    print("=============== Updated actors:")
     ac.print_actors(actors)
     return actors
 
@@ -72,6 +78,7 @@ if __name__ == '__main__':
     #test_update_neighbors(actors, tree)
     
     actors = test_refine_actors(tree, actors)
+    tree.print_tree()
     test_update_neighbors(actors, tree)
     #test_update_ghost(actors[(0, 0, 2)], (0, 1, 1))
     #test_update_ghost(actors[(0, 0, 2)], (0, 0, 1))

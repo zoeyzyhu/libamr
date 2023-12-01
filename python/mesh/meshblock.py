@@ -141,7 +141,7 @@ class MeshBlock:
         """Extract a part of the ghost zone during restriction."""
         si, ei, sj, ej, sk, ek = self.size.ghost_range(offsets)
         o3, o2, o1 = offsets
-        f3, f2, f1 = logicloc
+        f3, f2, f1 = logicloc[0] % 2, logicloc[1] % 2, logicloc[2] % 2
 
         len1, len2, len3 = ei - si, ej - sj, ek - sk
         ng1 = min(self.size.nx1 // 2, self.size.nghost)
