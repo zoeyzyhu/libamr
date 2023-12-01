@@ -139,24 +139,36 @@ class MeshBlock:
 
     def part(self, offsets: (int, int, int), logicloc: (int, int, int)) -> np.ndarray:
         """Extract a part of the ghost zone during restriction."""
-        si, _, sj, _, sk, _ = self.size.ghost_range(offsets)
-
+        si, ei, sj, ej, sk, ek = self.size.ghost_range(offsets)
         o3, o2, o1 = offsets
-        len1 = self.size.nx1 // 2 if o1 == 0 else self.size.nghost
-        len2 = self.size.nx2 // 2 if o2 == 0 else self.size.nghost
-        len3 = self.size.nx3 // 2 if o3 == 0 else self.size.nghost
+        f3, f2, f1 = logicloc
 
-        len2 = 1 if self.size.nx2 == 1 else len2
-        len3 = 1 if self.size.nx3 == 1 else len3
+        len1, len2, len3 = ei - si, ej - sj, ek - sk
+        ng1 = min(self.size.nx1 // 2, self.size.nghost)
+        ng2 = min(self.size.nx2 // 2, self.size.nghost)
+        ng3 = min(self.size.nx3 // 2, self.size.nghost)
 
-        of3, of2, of1 = logicloc
-        si, sj, sk = si + of1 * len1, sj + of2 * len2, sk + of3 * len3
-        print(f"si={si}, sj={sj}, sk={sk}")
+        if f1 != 0:
+            si = ei - ng1 if o1 != 0 else ei - len1 // 2
+        else:
+            ei = si + ng1 if o1 != 0 else si + len1 // 2
+
+        if self.size.nx2 > 1:
+            if f2 != 0:
+                sj = ej - ng2 if o2 != 0 else ej - len2 // 2
+            else:
+                ej = sj + ng2 if o2 != 0 else sj + len2 // 2
+
+        if self.size.nx3 > 1:
+            if f3 != 0:
+                sk = ek - ng3 if o3 != 0 else ek - len3 // 2
+            else:
+                ek = sk + ng3 if o3 != 0 else sk + len3 // 2
 
         byte = self.data.itemsize
         view = as_strided(
             self.data[sk:, sj:, si:, :],
-            shape=(len3, len2, len1, self.size.nvar),
+            shape=(ek - sk, ej - sj, ei - si, self.size.nvar),
             strides=(self.size.nc2 * self.size.nc1 * self.size.nvar * byte,
                      self.size.nc1 * self.size.nvar * byte, self.size.nvar * byte, byte),
             writeable=True
