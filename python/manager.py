@@ -22,15 +22,6 @@ def launch_actors(root: me.Tree) -> dict[(int,int,int), ac.MeshBlockActor]:
     return actors
 
 
-def update_neighbors_all(actors: dict[(int,int,int), ObjectRef],
-                     root: me.Tree) -> None:
-    for _, actor in actors.items():
-        for o3 in [-1, 0, 1]:
-            for o2 in [-1, 0, 1]:
-                for o1 in [-1, 0, 1]:
-                    offsets = (o3, o2, o1)
-                    actor.update_neighbors.remote(offsets, root, actors)
-
 def refine_actor(point: Tuple[int, int, int], root: me.Tree,
                  actors: dict[(int,int,int), ac.MeshBlockActor]) -> None:
     """Refine the block where the specified point locates."""
@@ -46,6 +37,26 @@ def refine_actor(point: Tuple[int, int, int], root: me.Tree,
 
     update_neighbors_all(actors, root)
     return root, actors
+
+
+def update_neighbors_all(actors: dict[(int,int,int), ObjectRef],
+                     root: me.Tree) -> None:
+    for _, actor in actors.items():
+        for o3 in [-1, 0, 1]:
+            for o2 in [-1, 0, 1]:
+                for o1 in [-1, 0, 1]:
+                    offsets = (o3, o2, o1)
+                    actor.update_neighbors.remote(offsets, root, actors)
+
+
+def update_ghost_all(actors: dict[(int,int,int), ac.MeshBlockActor]) -> None:
+    """Update ghost cells for all actors."""
+    for _, actor in actors.items():
+        for o3 in [-1, 0, 1]:
+            for o2 in [-1, 0, 1]:
+                for o1 in [-1, 0, 1]:
+                    offsets = (o3, o2, o1)
+                    actor.update_ghost.remote(offsets)
 
 
 def print_actors(actors: dict[(int,int,int), ac.MeshBlockActor]) -> None:

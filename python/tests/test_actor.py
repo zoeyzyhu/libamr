@@ -51,6 +51,11 @@ def test_update_ghost(actor, offsets):
     mg.print_actor(actor)
     return
 
+def test_update_ghost_all(actors):
+    print("\n===== Test update ghost all =====")
+    mg.update_ghost_all(actors)
+    mg.print_actors(actors)
+    return
 
 if __name__ == '__main__':
     # Initial split without refinement
