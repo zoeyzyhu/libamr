@@ -3,21 +3,11 @@ import sys
 sys.path.append('../')
 import mesh as me
 
-def test_locate_neighbors_down(root, node, offsets):
-    print("\n===== Test locate neighbors down =====")
-    print(f"node = {node}")
-    intervals = node.calculate_intervals(offsets)
-    print(f"\nintervals = {intervals}")
-    node_found = root.locate_neighbors_down(*intervals)
-    print(f"\nnode_found = {node_found}")
-
-def test_find_neighbors(node, offsets):
+def test_find_neighbors(node, offsets, coord):
     print("\n===== Test find neighbors =====")
     print(f"node = {node}")
-    neighbors = node.find_neighbors(offsets)
-    for neighbor in neighbors:
-        print(neighbor)
-    return neighbors
+    for nb in node.neighbors(offsets, coord):
+        print(nb)
 
 if __name__ == '__main__':
     size = me.RegionSize(x1dim=(0, 120., 8), x2dim=(0, 120., 4))
@@ -27,13 +17,10 @@ if __name__ == '__main__':
 
     root.children[0].children[1].split_block()
     node_finer = root.children[0].children[1].children[0]
+    mb = me.MeshBlock(node_finer.size)
     offsets = (0, 0, 1)
-    test_locate_neighbors_down(root, node_finer, offsets)
-    neighbors = test_find_neighbors(node_finer, offsets)
+    test_find_neighbors(node_finer, offsets, mb.coord)
 
-    node_coarser = root.children[0]
-    neighbors = test_find_neighbors(node_coarser, offsets)
-    
-
-
-
+    node_coarser = root.children[0].children[0]
+    mb = me.MeshBlock(node_coarser.size)
+    test_find_neighbors(node_coarser, offsets, mb.coord)
