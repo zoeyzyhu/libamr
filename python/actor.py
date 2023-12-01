@@ -15,24 +15,20 @@ class MeshBlockActor:
 
     def __init__(self) -> None:
         """Initialize MeshBlockActor."""
-        self.size = None
         self.mblock = None
 
     def new(self, size: me.RegionSize, coordinate_type: str = "cartesian") -> None:
         """Initialize MeshBlockActor from its tree node."""
-        self.size = size
-        self.mblock = me.MeshBlock(self.size, coordinate_type)
+        self.mblock = me.MeshBlock(size, coordinate_type)
         self.mblock.allocate().fill_random()
 
     def relaunch(self, data_ref: List[ObjectRef]) -> None:
         """Restart MeshBlockActor from its tree node."""
-        data = ray.get(data_ref[0])
-        self.size = data.size
-        self.mblock = data.mblock
+        self.mblock = ray.get(data_ref[0])
 
     def put_data(self):
         """Put the mesh block in Plasma store."""
-        ref = ray.put(self)
+        ref = ray.put(self.mblock)
         return ref
 
     def get_view(self, offsets: (int, int, int)) -> np.ndarray:
@@ -92,7 +88,7 @@ class MeshBlockActor:
         """Print the mesh block."""
         node_id = ray.get_runtime_context().get_node_id()
         worker_id = ray.get_runtime_context().get_worker_id()
-        return self.size, self.mblock, node_id, worker_id
+        return self.mblock.size, self.mblock, node_id, worker_id
 
 
 def launch_actors(node: me.Tree) -> List[MeshBlockActor]:
