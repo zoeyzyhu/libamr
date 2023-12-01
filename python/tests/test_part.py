@@ -22,7 +22,7 @@ def test_part_function():
     print("\n===== split block =====")
     root.children[1].split_block()
     fine_node1 = root.children[1].children[0]
-    fine_node2 = root.children[1].children[1]
+    fine_node2 = root.children[1].children[2]
     print(f"\nfine_node1 = {fine_node1}")
     fine_block1 = me.MeshBlock(fine_node1.size)
     fine_block1.allocate().fill_random()

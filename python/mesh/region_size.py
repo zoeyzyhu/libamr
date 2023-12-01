@@ -32,6 +32,42 @@ class RegionSize:
             if dmin > dmax:
                 raise ValueError(f"{name}min = {dmin} > {name}max = {dmax}")
 
+    def center(self) -> tuple[float]:
+        """Return the center of the region."""
+        return ((self.x3max + self.x3min) / 2.,
+                (self.x2max + self.x2min) / 2.,
+                (self.x1max + self.x1min) / 2.)
+
+    def ghost_range(self, offsets: (int, int, int)) -> tuple[int]:
+        """Return the range of ghost zone specified by the cubic offsets."""
+        def get_range(nx, nc, offset):
+            if offset == -1:
+                start, end = 0, self.nghost
+            elif offset == 0:
+                start, end = self.nghost, nx + self.nghost
+            else:
+                start, end = nx + self.nghost, nc
+            return start, end
+
+        o3, o2, o1 = offsets
+        si, ei = get_range(self.nx1, self.nc1, o1)
+
+        if self.nx2 > 1:
+            sj, ej = get_range(self.nx2, self.nc2, o2)
+        elif o2 == 0:
+            sj, ej = 0, 1
+        else:
+            sj, ej = 0, 0
+
+        if self.nx3 > 1:
+            sk, ek = get_range(self.nx3, self.nc3, o3)
+        elif o3 == 0:
+            sk, ek = 0, 1
+        else:
+            sk, ek = 0, 0
+
+        return si, ei, sj, ej, sk, ek
+
     def __str__(self) -> str:
         """Return a string representation of the region size."""
         dimensions = [
