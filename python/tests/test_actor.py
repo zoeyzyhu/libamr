@@ -9,6 +9,7 @@ def test_launch_actors(tree):
     print("\n===== Test launch actors =====")
     actors = ac.launch_actors(tree)
     ac.print_actors(actors)
+    print(actors)
     return actors
 
 def test_refine_actors(tree, actors):
@@ -38,16 +39,12 @@ def test_put_data(actors):
     ac.print_actors(new_actors)
     return
 
-def test_locate_neighbors(actor,root, offsets):
+def test_update_neighbors(actors, root):
     print("\n===== Test find neighbors =====")
-    print(f"offsets = {offsets}")
-    print("----- Actor's node -----")
-    ac.print_actors([actor])
-    neighbors = ray.get(actor.locate_neighbors.remote(root, offsets))
-    for i, neighbor in enumerate(neighbors):
-        print(f"----- Neighbor {i}-----")
-        print(neighbor)
-    return neighbors
+    ac.update_neighbors(actors, root)
+    for ll, actor in actors.items():
+        print("----- Actor {} -----".format(ll))
+        print(ray.get(actor.get_neighbors.remote()))
 
 def test_update_ghost(actor, offsets):
     print("\n===== Test update ghost =====")
@@ -70,9 +67,10 @@ if __name__ == '__main__':
     # Launch actors based on the tree
     ray.init(runtime_env={"py_modules": [me]})
     actors = test_launch_actors(tree)
-    actors = test_refine_actors(tree, actors)
-    tree.print_tree()
-    test_put_data(actors)
+    test_update_neighbors(actors, tree)
+    #actors = test_refine_actors(tree, actors)
+    #tree.print_tree()
+    #test_put_data(actors)
     #test_locate_neighbors(actors[1], tree, (0, 1, 1))
     #test_locate_neighbors(actors[0], tree, (0, 0, 1))
     #test_update_ghost(actors[1], (0, 1, 1))
