@@ -10,10 +10,12 @@ def test_find_neighbors(node, offsets, coord):
         print(nb)
 
 if __name__ == '__main__':
-    size = me.RegionSize(x1dim=(0, 120., 8), x2dim=(0, 120., 4))
-    me.Tree.set_block_size(nx1=2, nx2=2, nx3=1)
-    root = me.Tree(size)
+    size = me.RegionSize(x1dim=(0, 200., 10), x2dim=(0, 120., 6))
+    me.BlockTree.set_block_size(nx1=2, nx2=2, nx3=1)
+    root = me.BlockTree(size)
     root.create_tree()
+
+    root.print_tree()
 
     root.children[0].children[1].split_block()
     node_finer = root.children[0].children[1].children[0]
