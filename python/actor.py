@@ -76,10 +76,6 @@ class MeshBlockActor:
                 elif level and level > self.level:
                     self.mblock.part(offsets, logicloc)[:] = view
 
-    def set_neighbor(self, offsets, neighbors: [ObjectRef]) -> None:
-        """Set the neighbors of the mesh block."""
-        self.neighbors[offsets] = neighbors
-    
     def update_neighbors(self, offsets: (int, int, int), root:me.Tree, 
                          actors: dict[(int,int,int), ObjectRef]) -> None:
         """Update the neighbors of the mesh block."""
@@ -88,8 +84,10 @@ class MeshBlockActor:
         neighbor_actors = [
             actors[(nb.lx3, nb.lx2, nb.lx1)] for nb in neighbors
         ]
-        self.set_neighbor(offsets, neighbor_actors)
-    
+        self.neighbors[offsets] = neighbors
+
+@ray.remote
+class MeshBlockActorTestOnly(MeshBlockActor):
     def get_data(self) -> (me.MeshBlock, me.RegionSize, int):
         """Print the mesh block."""
         node_id = ray.get_runtime_context().get_node_id()

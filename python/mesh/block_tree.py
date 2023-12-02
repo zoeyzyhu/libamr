@@ -136,7 +136,7 @@ class BlockTree:
         lx2 = self.lx2 * 2 + ox2
         lx3 = self.lx3 * 2 + ox3
 
-        return BlockTreeTree(rs, (lx3, lx2, lx1), self)
+        return BlockTree(rs, (lx3, lx2, lx1), self)
 
     def split_block(self) -> None:
         """Split the block into 8 sub-blocks."""
