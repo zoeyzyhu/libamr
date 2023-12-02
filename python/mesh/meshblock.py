@@ -3,13 +3,13 @@
 
 from bisect import bisect
 from typing import Any
-from typing_extensions import Self
 from typing import Tuple
+from typing_extensions import Self
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
 from scipy.interpolate import interpn
 from .region_size import RegionSize
-from .coordinates_factory import CoordinateFactory
+from .coordinate_factory import CoordinateFactory
 from .coordinates import Coordinates
 
 
@@ -78,11 +78,10 @@ class MeshBlock:
     def fill_random(self) -> Self:
         """Fill interior zones with random values."""
         self.data.fill(-1)
-        #np.random.seed(seed) # remove me after testing
+        # np.random.seed(seed) # remove me after testing
         self.ghost[(0, 0, 0)][:] = np.random.uniform(0, 1, size=(
             self.size.nx3, self.size.nx2, self.size.nx1, self.size.nvar))
         return self
-
 
     def prolongated_view(self, my_offsets: (int, int, int),
                          finer: Coordinates) -> np.ndarray:
@@ -135,7 +134,7 @@ class MeshBlock:
         gcoord = np.array(np.meshgrid(
             gx3v[sk:ek], gx2v[sj:ej], gx1v[si:ei])).T.reshape(-1, 3)
         points = (self.coord.x3v[isk:iek],
-                  self.coord.x2v[isj:iej], 
+                  self.coord.x2v[isj:iej],
                   self.coord.x1v[isi:iei])
 
         # Interpolate data to coarser mesh
@@ -147,32 +146,32 @@ class MeshBlock:
                                        ).reshape(ek - sk, ej - sj, ei - si)
         return view
 
-    def part(self, offsets: Tuple[int, int, int], 
+    def part(self, offset: Tuple[int, int, int],
              logicloc: Tuple[int, int, int]) -> np.ndarray:
         """Extract a part of the ghost zone during restriction."""
-        o3, o2, o1 = offsets
-        of3, of2, of1 = logicloc[0] % 2, logicloc[1] % 2, logicloc[2] % 2
+        o3, o2, o1 = offset
+        locbit3, locbit2, locbit1 = logicloc[0] % 2, logicloc[1] % 2, logicloc[2] % 2
 
-        si, ei, sj, ej, sk, ek = self.size.ghost_range(offsets)
+        si, ei, sj, ej, sk, ek = self.size.ghost_range(offset)
         len1, len2, len3 = ei - si, ej - sj, ek - sk
         # Ghost coverage in finer blocks
         ng1 = min(self.size.nx1 // 2, self.size.nghost)
         ng2 = min(self.size.nx2 // 2, self.size.nghost)
         ng3 = min(self.size.nx3 // 2, self.size.nghost)
 
-        if of1 != 0:
+        if locbit1 != 0:
             si = ei - ng1 if o1 != 0 else ei - len1 // 2
         else:
             ei = si + ng1 if o1 != 0 else si + len1 // 2
 
         if self.size.nx2 > 1:
-            if of2 != 0:
+            if locbit2 != 0:
                 sj = ej - ng2 if o2 != 0 else ej - len2 // 2
             else:
                 ej = sj + ng2 if o2 != 0 else sj + len2 // 2
 
         if self.size.nx3 > 1:
-            if of3 != 0:
+            if locbit3 != 0:
                 sk = ek - ng3 if o3 != 0 else ek - len3 // 2
             else:
                 ek = sk + ng3 if o3 != 0 else sk + len3 // 2
@@ -211,88 +210,3 @@ class MeshBlock:
         if isinstance(other, MeshBlock):
             return self.coord == other.coord and self.data == other.data
         return False
-
-
-if __name__ == "__main__":
-    # test 1
-    size = RegionSize(x1dim=(0, 1, 2), x2dim=(0, 1, 4), nghost=2)
-    mb = MeshBlock(size)
-    mb.allocate()
-    print(mb)
-
-    # test 2
-    mb = MeshBlock(size, "cylindrical")
-    mb.allocate(2)
-    print(mb)
-
-    # test 3
-    size1 = RegionSize(x1dim=(0, 40., 4), x2dim=(0, 40., 2))
-    mb1 = MeshBlock(size1)
-    mb1.allocate(2).fill_random()
-    print("===== mb1 =====")
-    mb1.print_data()
-    print(mb1.view[(0, 0, 1)][0, :, :, 0])
-    print(mb1.view[(0, 0, 1)][0, :, :, 1])
-    print(mb1.view[(0, -1, -1)][0, :, :, 0])
-    print(mb1.view[(0, -1, -1)][0, :, :, 1])
-    print("===============")
-
-    size2 = RegionSize(x1dim=(40., 120., 4), x2dim=(0, 40., 2))
-    mb2 = MeshBlock(size2)
-    mb2.allocate(2).fill_random()
-    print("===== mb2 =====")
-    mb2.print_data()
-    print(mb2.view[(0, 1, 0)][0, :, :, 0])
-    print(mb2.view[(0, 1, 0)][0, :, :, 1])
-    print(mb2.view[(0, -1, 1)][0, :, :, 0])
-    print(mb2.view[(0, -1, 1)][0, :, :, 1])
-    print("===============")
-
-    size3 = RegionSize(x1dim=(0., 40., 4), x2dim=(40, 120., 2))
-    mb3 = MeshBlock(size3)
-    mb3.allocate(2).fill_random()
-    print("===== mb3 =====")
-    mb3.print_data()
-    print(mb3.view[(0, 1, -1)][0, :, :, 0])
-    print(mb3.view[(0, 1, -1)][0, :, :, 1])
-    print("===============")
-
-    size4 = RegionSize(x1dim=(40., 120., 4), x2dim=(40, 120., 2))
-    mb4 = MeshBlock(size4)
-    mb4.allocate(2).fill_random()
-    print("===== mb4 =====")
-    mb4.print_data()
-    print(mb4.view[(0, 1, 1)][0, :, :, 0])
-    print(mb4.view[(0, 1, 1)][0, :, :, 1])
-    print("===============")
-
-    # test 4 (prolongation)
-    print("==== Test Prolongation ====")
-    from .tree import Tree
-    Tree.set_block_size(nx1=2, nx2=2, nx3=1)
-    size = RegionSize(x1dim=(0, 120., 8), x2dim=(0, 120., 8))
-    root = Tree(size)
-    root.create_tree()
-    root.print_tree()
-    coarse_node = root.children[3].children[0]
-    print(f"coarse_node = {coarse_node}")
-    coarse_block = MeshBlock(coarse_node.size)
-    coarse_block.allocate().fill_random()
-    coarse_block.print_data()
-    print("\n===== split block =====")
-    root.children[3].children[1].split_block()
-    fine_node = root.children[3].children[1].children[0]
-    print(f"fine_node = {fine_node}")
-    fine_block = MeshBlock(fine_node.size)
-    fine_block.allocate().fill_random()
-    fine_block.print_data()
-
-    view = coarse_block.prolongated_view((0, 0, 1), fine_block.coord)
-    print(view.shape)
-    print(view)
-
-    # test 5 (restriction)
-    print("==== Test Restriction ====")
-    view = fine_block.restricted_view((0, 0, -1), coarse_block.coord)
-    print(view.shape)
-    print(view)

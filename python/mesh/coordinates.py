@@ -127,13 +127,3 @@ class Cylindrical(Coordinates):
                 np.array_equal(self.x2v, other.x2v) and \
                 np.array_equal(self.x3v, other.x3v)
         return False
-
-
-if __name__ == "__main__":
-    size = RegionSize((-1.0, 1.0, 5), nghost=2)
-    coords = Cartesian(size)
-    print(coords)
-
-    size.x1min = 0.0
-    coords = Cylindrical(size)
-    print(coords)

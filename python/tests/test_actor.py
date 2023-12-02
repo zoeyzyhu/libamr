@@ -46,22 +46,23 @@ def test_update_ghost(actor, offsets):
     print("----- Before update ghost -----")
     mg.print_actor(actor)
     print(f"offsets = {offsets}")
-    actor.update_ghost.remote(offsets)
+    tasks = actor.update_ghost.remote(offsets)
+    actor.wait_ghost.remote(tasks)
     print("----- Updated ghost -----")
     mg.print_actor(actor)
     return
 
-def test_update_ghost_all(actors):
+def test_update_ghosts_all(actors):
     print("\n===== Test update ghost all =====")
-    mg.update_ghost_all(actors)
+    mg.update_ghosts_all(actors)
     mg.print_actors(actors)
     return
 
 if __name__ == '__main__':
     # Initial split without refinement
     size = me.RegionSize(x1dim=(0, 120., 8), x2dim=(0, 120., 4))
-    me.Tree.set_block_size(nx1=2, nx2=2, nx3=1)
-    root = me.Tree(size)
+    me.BlockTree.set_block_size(nx1=2, nx2=2, nx3=1)
+    root = me.BlockTree(size)
     root.create_tree()
     #root.print_tree()
 
@@ -77,3 +78,4 @@ if __name__ == '__main__':
     offsets = (0, -1, -1)
     actor = actors[(0b100, 0b110, 0b110)]
     test_update_ghost(actor, offsets)
+    #test_update_ghosts_all(actors)

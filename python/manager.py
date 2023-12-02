@@ -1,20 +1,20 @@
-# pylint: disable = import-error, too-few-public-methods, unused-argument, unused-variable, unused-import, redefined-outer-name, undefined-variable
+# pylint: disable = import-error, no-member, too-few-public-methods, unused-argument, unused-variable, unused-import, redefined-outer-name, undefined-variable
 """Mesh class and related functions."""
 
+from typing import Tuple
 import ray
+from ray import ObjectRef
 import mesh as me
 import actor as ac
-from typing import Tuple
-from ray import ObjectRef
 
 
-def launch_actors(root: me.Tree) -> dict[(int,int,int), ac.MeshBlockActor]:
+def launch_actors(root: me.BlockTree) -> dict[(int, int, int), ObjectRef]:
     """Launch actors based on the tree."""
     actors = {}
     if not root.children:
         actor = ac.MeshBlockActor.remote()
         actor.new.remote(root)
-        actors[(root.lx3,root.lx2,root.lx1)]= actor
+        actors[(root.lx3, root.lx2, root.lx1)] = actor
     else:
         for child in root.children:
             if child:
@@ -22,11 +22,11 @@ def launch_actors(root: me.Tree) -> dict[(int,int,int), ac.MeshBlockActor]:
     return actors
 
 
-def refine_actor(point: Tuple[int, int, int], root: me.Tree,
-                 actors: dict[(int,int,int), ac.MeshBlockActor]) -> None:
+def refine_actor(point: Tuple[int, int, int], root: me.BlockTree,
+                 actors: dict[(int, int, int), ObjectRef]) -> None:
     """Refine the block where the specified point locates."""
     node = root.find_node(point)
-    node.split_block()
+    node.split()
 
     logicloc = node.lx3, node.lx2, node.lx1
     ray.kill(actors[logicloc])
@@ -39,27 +39,35 @@ def refine_actor(point: Tuple[int, int, int], root: me.Tree,
     return root, actors
 
 
-def update_neighbors_all(actors: dict[(int,int,int), ObjectRef],
-                     root: me.Tree) -> None:
+def update_neighbors_all(actors: dict[(int, int, int), ObjectRef],
+                         root: me.BlockTree) -> None:
+    """Update neighbors for all actors."""
     for _, actor in actors.items():
         for o3 in [-1, 0, 1]:
             for o2 in [-1, 0, 1]:
                 for o1 in [-1, 0, 1]:
                     offsets = (o3, o2, o1)
-                    actor.update_neighbors.remote(offsets, root, actors)
+                    actor.update_neighbor.remote(offsets, root, actors)
 
 
-def update_ghost_all(actors: dict[(int,int,int), ac.MeshBlockActor]) -> None:
+def update_ghosts_all(actors: dict[(int, int, int), ObjectRef]) -> None:
     """Update ghost cells for all actors."""
-    for _, actor in actors.items():
+    tasks = {}
+
+    for ll, actor in actors.items():
         for o3 in [-1, 0, 1]:
             for o2 in [-1, 0, 1]:
                 for o1 in [-1, 0, 1]:
                     offsets = (o3, o2, o1)
-                    actor.update_ghost.remote(offsets)
+                    tasks[(ll, offsets)] = actor.update_ghost.remote(offsets)
+
+    while tasks:
+        for key, task in tasks.items():
+            tasks[key] = actors[key[0]].wait_ghost.remote(key[1])
+        tasks = {key: value for key, value in tasks.items() if value}
 
 
-def print_actors(actors: dict[(int,int,int), ac.MeshBlockActor]) -> None:
+def print_actors(actors: dict[(int, int, int), ObjectRef]) -> None:
     """Print the mesh block."""
     for ll in actors:
         mblock, node_id, worker_id = ray.get(actors[ll].get_data.remote())

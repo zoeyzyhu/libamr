@@ -3,6 +3,7 @@
 
 from typing import Tuple
 
+
 class RegionSize:
     """A class for representing the size of a multidimensional block."""
 
@@ -39,9 +40,9 @@ class RegionSize:
                 (self.x2max + self.x2min) / 2.,
                 (self.x1max + self.x1min) / 2.)
 
-    def ghost_range(self, offsets: Tuple[int, int, int]
+    def ghost_range(self, offset: Tuple[int, int, int]
                     ) -> Tuple[int, int, int, int, int, int]:
-        """Return the range of ghost zone specified by the cubic offsets."""
+        """Return the range of ghost zone specified by the cubic offset."""
         def get_range(nx, nc, offset):
             if offset == -1:
                 start, end = 0, self.nghost
@@ -51,7 +52,7 @@ class RegionSize:
                 start, end = nx + self.nghost, nc
             return start, end
 
-        o3, o2, o1 = offsets
+        o3, o2, o1 = offset
         si, ei = get_range(self.nx1, self.nc1, o1)
 
         if self.nx2 > 1:
@@ -99,22 +100,3 @@ class RegionSize:
                 self.x3max == other.x3max and self.nx3 == other.nx3 and \
                 self.nghost == other.nghost and self.nvar == other.nvar
         return False
-
-
-if __name__ == "__main__":
-    region_size1 = RegionSize((0, 1, 2))
-    print(region_size1)
-
-    region_size2 = RegionSize((0, 1, 2), (0, 1, 2))
-    print(region_size2)
-
-    region_size3 = RegionSize(
-        x1dim=(0, 1, 2), x2dim=(0, 1, 2), x3dim=(-2, 3, 3))
-    print(region_size3)
-
-    region_size4 = RegionSize(
-        x1dim=(0, 1, 2), x3dim=(-2, 3, 3), x2dim=(0, 1, 2))
-    print(region_size4)
-
-    print(region_size2 == region_size3)
-    print(region_size4 == region_size3)
