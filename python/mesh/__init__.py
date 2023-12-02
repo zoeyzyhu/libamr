@@ -5,9 +5,9 @@ This package provides functionality...
 """
 
 from .region_size import RegionSize
-from .coordinates import Coordinates
-from .coordinates_factory import CoordinateFactory
+from .coordinates import Coordinates, Cartesian, Cylindrical
+from .coordinate_factory import CoordinateFactory
 from .block_tree import BlockTree
 from .meshblock import MeshBlock
 
-print("Importing `Meshblock` module!")
+print("Importing `Mesh` module!")
