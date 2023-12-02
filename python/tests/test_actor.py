@@ -52,9 +52,9 @@ def test_update_ghost(actor, offsets):
     mg.print_actor(actor)
     return
 
-def test_update_ghost_all(actors):
+def test_update_ghosts_all(actors):
     print("\n===== Test update ghost all =====")
-    mg.update_ghost_all(actors)
+    mg.update_ghosts_all(actors)
     mg.print_actors(actors)
     return
 
@@ -78,3 +78,4 @@ if __name__ == '__main__':
     offsets = (0, -1, -1)
     actor = actors[(0b100, 0b110, 0b110)]
     test_update_ghost(actor, offsets)
+    #test_update_ghosts_all(actors)
