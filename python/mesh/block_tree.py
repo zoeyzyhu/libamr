@@ -8,25 +8,37 @@ from .region_size import RegionSize
 from .meshblock import MeshBlock
 from .coordinates import Coordinates
 
-class Tree:
+
+class BlockTree:
     """A class representing a mesh block tree."""
 
-    max_num_leaves = 8  # default # leaves in 3d after split
     block_size = (1, 1, 1)  # default min block size
 
     @staticmethod
     def set_block_size(nx1: int, nx2: int = 1, nx3: int = 1) -> None:
         """Set the block size."""
-        Tree.block_size = (nx1, nx2, nx3)
+        BlockTree.block_size = (nx1, nx2, nx3)
 
     def __init__(self, size: RegionSize,
                  logicloc: (int, int, int) = (1, 1, 1), parent=None):
-        """Initialize Tree with size, level, and optional parent."""
+        """Initialize BlockTree with size, level, and optional parent."""
+        if size.nx3 % block_size[0] != 0 or \
+           size.nx2 % block_size[1] != 0 or \
+           size.nx1 % block_size[2] != 0:
+            raise ValueError("region size is not divisible by block size")
+
         self.size = size
         self.lx3, self.lx2, self.lx1 = logicloc
         self.parent = parent
         self.children = []
         self.level = parent.level + 1 if parent else 0
+
+    def root(self) -> Self:
+        """Find the root of the tree."""
+        node = self
+        while node.parent:
+            node = node.parent
+        return node
 
     def generate_child(self, ox1: int = 0, ox2: int = 0, ox3: int = 0) -> Optional[Self]:
         """Generate a child block without refinement."""
@@ -91,8 +103,8 @@ class Tree:
 
         return Tree(rs, (lx3, lx2, lx1), self)
 
-    def generate_child_refine(self, ox1: int = 0, ox2: int = 0, ox3: int = 0) -> Self:
-        """Generate a child block with refinement."""
+    def spawn(self, ox1: int = 0, ox2: int = 0, ox3: int = 0) -> Self:
+        """Generate a child block."""
         nx1 = self.size.nx1
         dx1 = (self.size.x1max - self.size.x1min) / (2. * nx1)
         x1min = self.size.x1min + ox1 * dx1 * nx1
@@ -124,19 +136,14 @@ class Tree:
         lx2 = self.lx2 * 2 + ox2
         lx3 = self.lx3 * 2 + ox3
 
-        return Tree(rs, (lx3, lx2, lx1), self)
+        return BlockTreeTree(rs, (lx3, lx2, lx1), self)
 
-    def split_block(self, refine=True) -> None:
+    def split_block(self) -> None:
         """Split the block into 8 sub-blocks."""
         if len(self.children) > 0:
             raise ValueError("This block is not a leaf, can not split it")
 
-        self.children = [None] * self.max_num_leaves
-
-        if self.size.nx1 > 1:
-            ox1_range = [0, 1]
-        else:
-            ox1_range = [0]
+        ox1_range = [0, 1]
 
         if self.size.nx2 > 1:
             ox2_range = [0, 1]
@@ -151,38 +158,10 @@ class Tree:
         for ox3 in ox3_range:
             for ox2 in ox2_range:
                 for ox1 in ox1_range:
-                    child_index = ox1 + ox2 * 2 + ox3 * 4
-                    if refine:
-                        self.children[child_index] = self.generate_child_refine(
-                            ox1, ox2, ox3)
-                    else:
-                        self.children[child_index] = self.generate_child(
-                            ox1, ox2, ox3)
+                    self.children.append(self.spawn(ox1, ox2, ox3))
 
-        all_none = True
-        for child in self.children:
-            if child is not None:
-                all_none = False
-                break
-        if all_none:
-            self.children = []
-
-    def split_chain(self, neighbor_level):
-        """Split the block chain."""
-        if self.level - neighbor_level >= 0:
-            # print("does not need to split")
-            return
-        self.split_block()
-
-    def merge_blocks(self):
-        """Merge children blocks into a parent block."""
-
-    def root(self) -> Self:
-        """Find the root of the tree."""
-        node = self
-        while node.parent:
-            node = node.parent
-        return node
+    def merge_blocks(self, blocks: List[Self]) -> Self:
+        """Merge blocks into a parent block."""
 
     def find_node(self, point: (float, float, float)) -> Optional[Self]:
         """Find the block that contains the point."""
@@ -202,7 +181,7 @@ class Tree:
                 continue
             node = child.find_node(point)
             if node is not None:
-                return node 
+                return node
 
         return None
 
@@ -222,16 +201,13 @@ class Tree:
 
         return neighbors
 
-
     def create_tree(self) -> None:
         """Create the tree."""
-        nx1, nx2, nx3 = Tree.block_size
-        if self.size.nx3 % nx3 != 0 or \
-           self.size.nx2 % nx2 != 0 or \
-           self.size.nx1 % nx1 != 0:
-            raise ValueError("region size is not divisible by block size")
 
-        self.split_block(refine=False)
+        if self.size.nx3 > nx3 or \
+           self.size.nx2 > nx2 or \
+           self.size.nx1 > nx1:
+        self.split_block()
 
         for child in self.children:
             if child is not None:
