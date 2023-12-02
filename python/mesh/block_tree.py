@@ -39,8 +39,15 @@ class BlockTree:
             node = node.parent
         return node
 
-    def spawn(self, of1: int = 0, of2: int = 0, of3: int = 0) -> Self:
-        """Generate a child block."""
+    def node(self, *ofs : [int]) -> Self:
+        """Get the tree node at the given offset."""
+        node = self
+        for of in ofs:
+            node = node.children[of]
+        return node
+
+    def refine(self, of1: int = 0, of2: int = 0, of3: int = 0) -> Self:
+        """Refine a block at offset"""
         nx1 = self.size.nx1
         dx1 = (self.size.x1max - self.size.x1min) / (2. * nx1)
         x1min = self.size.x1min + of1 * dx1 * nx1
@@ -74,7 +81,7 @@ class BlockTree:
 
         return BlockTree(rs, (lx3, lx2, lx1), self)
 
-    def split_block(self) -> None:
+    def split(self) -> None:
         """Split the block into 8 sub-blocks."""
         if len(self.children) > 0:
             raise ValueError("This block is not a leaf, can not split it")
@@ -94,10 +101,13 @@ class BlockTree:
         for of3 in of3_range:
             for of2 in of2_range:
                 for of1 in of1_range:
-                    self.children.append(self.spawn(of1, of2, of3))
+                    self.children.append(self.refine(of1, of2, of3))
 
-    def divide_block(self) -> None:
-        """Merge blocks into a parent block."""
+    def merge(self):
+        """Merge children blocks into a parent block."""
+
+    def divide(self) -> None:
+        """Divide the block into 8 sub-blocks."""
         nb1 = self.size.nx1 // BlockTree.block_size[2]
         nb2 = self.size.nx2 // BlockTree.block_size[1]
         nb3 = self.size.nx3 // BlockTree.block_size[0]
@@ -156,11 +166,31 @@ class BlockTree:
             return self
 
         for child in self.children:
-            if child is None:
-                continue
             node = child.find_node(point)
             if node is not None:
                 return node
+
+        return None
+
+    def find_node_by_logicloc(self, logicloc: (int, int, int)) -> Optional[Self]:
+        """Find the block that has the logic location."""
+        if logicloc == (self.lx3, self.lx2, self.lx1):
+            return self
+
+        level = floor(log2(logicloc[2]))
+        if level == 0:
+            return None
+
+        lx3 = logicloc[0] >> (level - 1)
+        lx2 = logicloc[1] >> (level - 1)
+        lx1 = logicloc[2] >> (level - 1)
+
+        for child in self.children:
+            if child.lx1 == lx1 and child.lx2 == lx2 and child.lx3 == lx3:
+                lx3 = logicloc[0] >> 1
+                lx2 = logicloc[1] >> 1
+                lx1 = logicloc[2] >> 1
+                return child.find_node_by_logicloc((lx3, lx2, lx1))
 
         return None
 
@@ -193,7 +223,7 @@ class BlockTree:
         if self.level >= max_level:
             return
     
-        self.divide_block()
+        self.divide()
         for child in self.children:
             child.create_tree(max_level)
 
@@ -201,8 +231,7 @@ class BlockTree:
         """Print the tree."""
         print(self)
         for child in self.children:
-            if child is not None:
-                child.print_tree()
+            child.print_tree()
 
     def __str__(self):
         """Return a string representation of the node."""
@@ -212,31 +241,3 @@ class BlockTree:
                f"lx1={str(bin(self.lx1))[2:]}\n" + \
                f"size={self.size}\nchildren={self.children}"
 
-
-if __name__ == "__main__":
-    BlockTree.set_block_size(nx1=2, nx2=2, nx3=1)
-    rs = RegionSize(x1dim=(0, 120., 8), x2dim=(0, 120., 4))
-    root = BlockTree(rs)
-    root.create_tree()
-
-    print("\n\n===== split block =====")
-    root.children[3].children[1].split_block()
-    print(root.children[1].children[0])
-
-    n1 = root.children[3].children[1].children[0]
-
-    print("\n\n===== split block chain =====")
-
-    n1.split_block()
-
-    n1.children[0].split_block()
-
-    root.children[0].children[0].split_block()
-
-    root.print_tree()
-    # print(root.leaf[3].leaf[1].leaf[0])
-    # print(root.leaf[3].leaf[1].leaf[1])
-    # print(root.leaf[3].leaf[1].leaf[2])
-    # print(root.leaf[3].leaf[1].leaf[3])
-    node = root.children[3].children[1].find_root()
-    print(node)

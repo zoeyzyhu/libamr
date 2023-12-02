@@ -8,21 +8,21 @@ import mesh as me
 
 def test_part_function():
     """Test part function in meshblock."""
-    me.Tree.set_block_size(nx1=4, nx2=4, nx3=1)
+    me.BlockTree.set_block_size(nx1=4, nx2=4, nx3=1)
     rs = me.RegionSize(x1dim=(0, 120., 8), x2dim=(0, 120., 8), nghost=2)
-    root = me.Tree(rs)
+    root = me.BlockTree(rs)
     root.create_tree()
     root.print_tree()
 
-    coarse_node = root.children[0]
+    coarse_node = root.node(0)
     print(f"\ncoarse_node = {coarse_node}")
     coarse_block = me.MeshBlock(coarse_node.size)
     coarse_block.allocate().fill_random()
     coarse_block.print_data()
     print("\n===== split block =====")
-    root.children[1].split_block()
-    fine_node1 = root.children[1].children[0]
-    fine_node2 = root.children[1].children[2]
+    root.node(1).split()
+    fine_node1 = root.node(1,0)
+    fine_node2 = root.node(1,2)
     print(f"\nfine_node1 = {fine_node1}")
     fine_block1 = me.MeshBlock(fine_node1.size)
     fine_block1.allocate().fill_random()
