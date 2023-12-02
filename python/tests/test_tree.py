@@ -3,16 +3,11 @@ import sys
 sys.path.append('../')
 import mesh as me
 
-def test_find_neighbors(node, offsets, coord):
-    print("\n===== Test find neighbors =====")
-    print(f"node = {node}")
-    for nb in node.find_neighbors(offsets, coord):
-        print(nb)
 
-if __name__ == '__main__':
+def test_original():
     me.BlockTree.set_block_size(nx1=2, nx2=2, nx3=1)
-    rs = me.RegionSize(x1dim=(0, 120., 8), x2dim=(0, 120., 4))
-    root = me.BlockTree(rs)
+    size = me.RegionSize(x1dim=(0, 120., 8), x2dim=(0, 120., 4))
+    root = me.BlockTree(size)
     root.create_tree()
 
     print("\n\n===== split block =====")
@@ -49,3 +44,20 @@ if __name__ == '__main__':
     node_coarser = root.node(0,0,0)
     mb = me.MeshBlock(node_coarser.size)
     test_find_neighbors(node_coarser, offsets, mb.coord)
+
+def test_find_neighbors(node, offsets, coord):
+    print("\n===== Test find neighbors =====")
+    print(f"node = {node}")
+    for nb in node.find_neighbors(offsets, coord):
+        print(nb)
+
+def test_create_tree():
+    print("\n===== Test create tree =====")
+    size = me.RegionSize(x1dim=(0, 120., 8), x2dim=(0, 120., 4))
+    root = me.BlockTree(size)
+    root.create_tree()
+    root.print_tree()
+
+
+if __name__ == '__main__':
+    test_create_tree()
