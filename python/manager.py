@@ -54,9 +54,20 @@ def update_neighbors_all(actors: dict[(int, int, int), ObjectRef],
 def update_ghosts_all(actors: dict[(int, int, int), ObjectRef]) -> None:
     """Update ghost cells for all actors."""
     tasks = {}
+    waiting_actors = set(actors.keys())
 
-    for ll, actor in actors.items():
+    while waiting_actors:
+        ll = waiting_actors.pop()
+        actor = actors[ll]
+
+        ready = ray.get(actor.get_status.remote())
+        if not ready:
+            waiting_actors.add(ll)
+            continue
+
         tasks[ll] = []
+        waiting_actors.pop(ll)
+
         for o3 in [-1, 0, 1]:
             for o2 in [-1, 0, 1]:
                 for o1 in [-1, 0, 1]:
