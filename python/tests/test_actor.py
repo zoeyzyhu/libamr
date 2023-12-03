@@ -15,12 +15,14 @@ def test_launch_actors(tree):
 
 def test_refine_actors(point, root, actors):
     print("\n===== Test refine actors =====")
-    root, actors = mg.refine_actor(point, root, actors)
+    #root, actors = mg.refine_actor(point, root, actors)
+    mg.refine_actor(point, root, actors)
+
     print("\n===== After refine actors: Tree =====")
     root.print_tree()
     print("\n===== After refine actors: Actors =====")
     mg.print_actors(actors)
-    return root, actors
+    #return root, actors
 
 def test_put_data(actors):
     print("\n===== Test put data =====")
@@ -74,8 +76,5 @@ if __name__ == '__main__':
     point_to_refine = (0, 29, 44)
     mg.refine_actor(point_to_refine, root, actors)
 
-    # Update ghost cells of a designated zone
-    offsets = (0, -1, -1)
-    actor = actors[(0b100, 0b110, 0b110)]
-    test_update_ghost(actor, offsets)
-    #test_update_ghosts_all(actors)
+    # Update ghost zones of all blocks
+    test_update_ghosts_all(actors)

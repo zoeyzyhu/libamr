@@ -23,6 +23,7 @@ class MeshBlock:
         self.data = None
         self.view = {}
         self.ghost = {}
+        self.is_ready = False
 
     def allocate(self, nvar: int = 1) -> Self:
         """Allocate memory for the mesh block."""
@@ -45,6 +46,7 @@ class MeshBlock:
                 for o1 in [-1, 0, 1]:
                     self.create_strided_view(o3, o2, o1, is_ghost=True)
 
+        self.is_ready = True
         return self
 
     def create_strided_view(self, o3, o2, o1, is_ghost):
