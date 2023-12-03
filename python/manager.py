@@ -36,7 +36,6 @@ def refine_actor(point: Tuple[int, int, int], root: me.BlockTree,
     actors.update(new_actors)
 
     update_neighbors_all(actors, root)
-    return root, actors
 
 
 def update_neighbors_all(actors: dict[(int, int, int), ObjectRef],
@@ -46,6 +45,8 @@ def update_neighbors_all(actors: dict[(int, int, int), ObjectRef],
         for o3 in [-1, 0, 1]:
             for o2 in [-1, 0, 1]:
                 for o1 in [-1, 0, 1]:
+                    if o3 == o2 == o1 == 0:
+                        continue
                     offsets = (o3, o2, o1)
                     actor.update_neighbor.remote(offsets, root, actors)
 
@@ -55,16 +56,21 @@ def update_ghosts_all(actors: dict[(int, int, int), ObjectRef]) -> None:
     tasks = {}
 
     for ll, actor in actors.items():
+        tasks[ll] = []
         for o3 in [-1, 0, 1]:
             for o2 in [-1, 0, 1]:
                 for o1 in [-1, 0, 1]:
+                    if o3 == o2 == o1 == 0:
+                        continue
                     offsets = (o3, o2, o1)
-                    tasks[(ll, offsets)] = actor.update_ghost.remote(offsets)
+                    tasks[ll].extend(
+                        ray.get(actor.update_ghost.remote(offsets)))
 
+    tasks = {ll: task for ll, task in tasks.items() if task}
     while tasks:
-        for key, task in tasks.items():
-            tasks[key] = actors[key[0]].wait_ghost.remote(key[1])
-        tasks = {key: value for key, value in tasks.items() if value}
+        for ll, task in tasks.items():
+            tasks[ll] = ray.get(actors[ll].wait_ghost.remote(task))
+        tasks = {ll: task for ll, task in tasks.items() if task}
 
 
 def print_actors(actors: dict[(int, int, int), ObjectRef]) -> None:

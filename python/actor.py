@@ -38,9 +38,10 @@ class MeshBlockActor:
         refs = ray.put([self.logicloc, self.mblock.data])
         return refs
 
-    def get_view(self, offsets: (int, int, int)) -> np.ndarray:
+    def get_view(self, my_offsets: (int, int, int)) -> np.ndarray:
         """Get the view of the interior."""
-        return self.mblock.view[offsets], self.logicloc
+        nb_offsets = tuple(-x for x in my_offsets)
+        return self.mblock.view[my_offsets], self.logicloc, nb_offsets
 
     def get_prolong(self, my_offsets: (int, int, int),
                     finer: me.Coordinates) -> np.ndarray:
@@ -81,9 +82,14 @@ class MeshBlockActor:
 
     def update_ghost(self, offsets: (int, int, int)) -> [ObjectRef]:
         """Launch ghost-cell tasks."""
-        nbs = self.neighbors[offsets]
-        nb_offsets = tuple(-x for x in offsets)
+        if offsets not in self.neighbors:
+            return []
 
+        nbs = self.neighbors[offsets]
+        if len(nbs) == 0:
+            return []
+
+        nb_offsets = tuple(-x for x in offsets)
         if len(nbs) > 1:  # neighbors at finer level
             tasks = [nb.get_restrict.remote(
                 nb_offsets, self.mblock.coord) for nb in nbs]
@@ -110,3 +116,7 @@ class MeshBlockActor:
         node_id = ray.get_runtime_context().get_node_id()
         worker_id = ray.get_runtime_context().get_worker_id()
         return self.mblock, node_id, worker_id
+
+    def get_status(self) -> bool:
+        """Get the status of the interior updates."""
+        return self.mblock.is_ready
