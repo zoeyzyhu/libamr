@@ -101,5 +101,5 @@ z.junk
 *.numbers
 
 # Logs
-*log*.md
+*log*
 
