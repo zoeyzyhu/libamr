@@ -74,10 +74,6 @@ if __name__ == '__main__':
     # Refine an actor based on a point
     point_to_refine = (0, 29, 44)
     mg.refine_actor(point_to_refine, root, actors)
-    mg.print_actors(actors)
 
-    # Update ghost cells of a designated zone
-    #offsets = (0, -1, -1)
-    #actor = actors[(0b100, 0b110, 0b110)]
-    #test_update_ghost(actor, offsets)
+    # Update ghost zones of all blocks
     test_update_ghosts_all(actors)
