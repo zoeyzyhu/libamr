@@ -66,8 +66,6 @@ def update_ghosts_all(actors: dict[(int, int, int), ObjectRef]) -> None:
             continue
 
         tasks[ll] = []
-        waiting_actors.pop(ll)
-
         for o3 in [-1, 0, 1]:
             for o2 in [-1, 0, 1]:
                 for o1 in [-1, 0, 1]:
