@@ -45,8 +45,10 @@ def update_neighbors_all(actors: dict[(int, int, int), ObjectRef],
         for o3 in [-1, 0, 1]:
             for o2 in [-1, 0, 1]:
                 for o1 in [-1, 0, 1]:
+
                     if o3 == o2 == o1 == 0:
                         continue
+
                     offsets = (o3, o2, o1)
                     actor.update_neighbor.remote(offsets, root, actors)
 
@@ -54,6 +56,7 @@ def update_neighbors_all(actors: dict[(int, int, int), ObjectRef],
 def update_ghosts_all(actors: dict[(int, int, int), ObjectRef]) -> None:
     """Update ghost cells for all actors."""
     tasks = {}
+
     waiting_actors = set(actors.keys())
 
     while waiting_actors:

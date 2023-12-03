@@ -17,6 +17,7 @@ def test_refine_actors(point, root, actors):
     print("\n===== Test refine actors =====")
     #root, actors = mg.refine_actor(point, root, actors)
     mg.refine_actor(point, root, actors)
+
     print("\n===== After refine actors: Tree =====")
     root.print_tree()
     print("\n===== After refine actors: Actors =====")

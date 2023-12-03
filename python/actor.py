@@ -82,6 +82,7 @@ class MeshBlockActor:
 
     def update_ghost(self, offsets: (int, int, int)) -> [ObjectRef]:
         """Launch ghost-cell tasks."""
+
         if offsets not in self.neighbors:
             return []
 
@@ -90,6 +91,7 @@ class MeshBlockActor:
             return []
 
         nb_offsets = tuple(-x for x in offsets)
+
         if len(nbs) > 1:  # neighbors at finer level
             tasks = [nb.get_restrict.remote(
                 nb_offsets, self.mblock.coord) for nb in nbs]
@@ -120,3 +122,4 @@ class MeshBlockActor:
     def get_status(self) -> bool:
         """Get the status of the interior updates."""
         return self.mblock.is_ready
+
