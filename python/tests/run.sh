@@ -1,16 +1,13 @@
 #!/bin/bash
+file_to_test="test_actor.py"
+test_focus="test"
 
+current_date=$(date +"%y%m%d")
 current_time=$(date +"%T")
-log_file="log_actor_1203_worker_id.txt"
+file_name="${file_to_test%.*}"
+log_file="log_${file_name}_${current_date}_${test_focus}.txt"
 test_description="
-    Test if a workder_id represent a unique logical CPU core. \n
-    \t- Set num_cpus = 4 \n
-    \t- Check if we only get 4 unique worker_ids \n
-    :: We get 11 worker_ids. \n\n
-    \t-Replace workder_id with actor_id and check the difference. \n
-    :: We get 11 actor_ids. \n\n
-    \t-In the decorator for the actor, set fractional num_cpu = 0.1. \n
-    :: Still 11 worker_ids. \n\n
+    Test description here.
 "
 separator="\n\n\n\n\n===================================================================================================="
 
