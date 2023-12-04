@@ -98,6 +98,7 @@ class BlockTree:
 
     def merge(self):
         """Merge children blocks into a parent block."""
+        self.children.clear()
 
     def divide_mesh(self) -> None:
         """Divide the block into 8 sub-blocks."""

@@ -63,6 +63,10 @@ class MeshBlockActor:
             return 1  # refine
         return 0
 
+    def reset_status(self) -> None:
+        """Reset the status of the mesh block."""
+        self.mblock.is_ready = False
+
     def put_data(self):
         """Put the mesh block in Plasma store."""
         refs = ray.put([self.logicloc, self.mblock.data])
@@ -87,9 +91,28 @@ class MeshBlockActor:
         data = self.mblock.restricted_view(my_offsets, coarser)
         return data, self.logicloc, nb_offsets
 
-    def get_logicloc(self) -> [int]:
-        """Get the logic location of the mesh block."""
-        return self.logicloc
+    def fill_internal_data(self, parent_actor: ObjectRef, logloc=None) -> None:
+        """Fill the internal data of the mesh block."""
+        if logloc is None:
+            internal_view = ray.get(
+                parent_actor.get_prolong.remote((0, 0, 0), self.mblock.coord))
+            self.mblock.fill_data(internal_view[0])
+        else:
+            internal_view = ray.get(
+                parent_actor.get_restrict.remote((0, 0, 0), self.mblock.coord))
+            logloc = (logloc[0], 1 - logloc[1], logloc[2])
+            self.mblock.part((0, 0, 0), logloc)[:] = internal_view[0]
+        self.mblock.is_ready = True
+
+    def update_neighbor(self, offsets: Tuple[int, int, int], root: me.BlockTree,
+                        actors: Dict[Tuple[int, int, int], ObjectRef]) -> None:
+        """Update the neighbors of the mesh block."""
+        node = root.find_node(self.mblock.size.center())
+        neighbors = node.find_neighbors(offsets, self.mblock.coord)
+
+        self.neighbors[offsets] = [
+            actors[(nb.lx3, nb.lx2, nb.lx1)] for nb in neighbors
+        ]
 
     def level_diff(self, logicloc: Tuple[int, int, int]) -> int:
         """Get the level difference between two logic locations."""
@@ -133,32 +156,22 @@ class MeshBlockActor:
 
         return tasks
 
-    def update_neighbor(self, offsets: Tuple[int, int, int], root: me.BlockTree,
-                        actors: Dict[Tuple[int, int, int], ObjectRef]) -> None:
-        """Update the neighbors of the mesh block."""
-        node = root.find_node(self.mblock.size.center())
-        neighbors = node.find_neighbors(offsets, self.mblock.coord)
-
-        self.neighbors[offsets] = [
-            actors[(nb.lx3, nb.lx2, nb.lx1)] for nb in neighbors
-        ]
-
     def get_data(self) -> (me.MeshBlock, me.RegionSize, int):
         """Print the mesh block."""
         node_id = ray.get_runtime_context().get_node_id()
         worker_id = ray.get_runtime_context().get_worker_id()
         return self.mblock, node_id, worker_id
 
+    def get_logicloc(self) -> [int]:
+        """Get the logic location of the mesh block."""
+        return self.logicloc
+
+    def get_coord(self) -> me.CoordinateFactory:
+        """Return coord of mblock."""
+        return self.mblock.coord
+
     def get_status(self) -> bool:
         """Get the status of the interior updates."""
         if self.mblock is None:
             return False
         return self.mblock.is_ready
-
-
-def print_actor(actor: ObjectRef) -> None:
-    """Print the mesh block."""
-    mblock, node_id, worker_id = ray.get(actor.get_data.remote())
-    print(f"\nNode:{node_id}\nWorker:{worker_id}")
-    print(f"size = {mblock.size}")
-    mblock.print_data()
