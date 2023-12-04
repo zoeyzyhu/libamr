@@ -8,11 +8,12 @@
 #SBATCH --partition=standard
 #SBATCH --output=testr.log
 #SBATCH --nodes=3
+### Necessary to prevent 2 users bind IP and port for
+### Ray head node on the same slurm node
 #SBATCH --exclusive
 ### --Give all resources to a single Ray worker runtime.
 ### --Ray can manage the resources internally.
 #SBATCH --ntasks-per-node=1
-
 
 # Get the node names
 nodes=$(scontrol show hostnames "$SLURM_JOB_NODELIST")
@@ -50,6 +51,18 @@ srun --nodes=1 --ntasks=1 -w "$head_node" \
 # Optional; may be useful in Ray versions < 1.0.
 sleep 10
 
+# Set up Prometheus and Grafana on the head node
+echo "===== Set up Prometheus and Grafana on the head node: $head_node ====="
+
+cd ~/libamr/python/tests/prometheus
+./prometheus --config.file=/tmp/ray/session_latest/metrics/prometheus/prometheus.yml &
+
+cd ~/libamr/python/tests/grafana
+./bin/grafana-server --config /tmp/ray/session_latest/metrics/grafana/grafana.ini web &
+
+# Double forward local port to the head node's port
+# ssh -L 3000:head_node:3000 -N username@login_node
+
 # Start the Ray worker nodes
 worker_num=$((SLURM_JOB_NUM_NODES - 1))
 for ((i = 1; i <= worker_num; i++)); do
@@ -62,14 +75,10 @@ done
 
 # ===== Run test code below =====
 
+cd ~/libamr/python/tests/
+log_file="log_actor_1203.txt"
 current_time=$(date +"%T")
-log_file="log_actor_1203_worker_id.txt"
-test_description="
-    Test description here. \n
-"
-separator="\n\n\n\n\n===================================================================================================="
 
-echo -e "$separator" >> "$log_file"
-echo -e "Test started at: $current_time\n" >> "$log_file"
-echo -e $test_description >> "$log_file"
+echo -e "\n\n\n\n======================= Time to start this test: $current_time =======================" >> "$log_file"
+
 python test_actor.py >> "$log_file"
