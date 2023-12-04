@@ -3,6 +3,7 @@
 
 from math import floor, log2
 from typing import Tuple, Dict, List
+import time
 import ray
 from ray import ObjectRef
 import numpy as np
@@ -50,6 +51,17 @@ class MeshBlockActor:
         self.mblock.allocate(data.shape[-1])
         self.mblock.data[:] = data[:]
         self.neighbors = {}
+
+    def work(self) -> None:
+        """Update the interior of the mesh block."""
+        time.sleep(10)
+        thresholds = (0.1, 0.9)  # coarsen, refine
+        x = np.random.rand(1)
+        if x < thresholds[0]:
+            return -1  # coarsen
+        if x > thresholds[1]:
+            return 1  # refine
+        return 0
 
     def put_data(self):
         """Put the mesh block in Plasma store."""

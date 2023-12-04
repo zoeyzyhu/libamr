@@ -5,7 +5,7 @@ test_focus="test"
 current_date=$(date +"%y%m%d")
 current_time=$(date +"%T")
 file_name="${file_to_test%.*}"
-log_file="log_${file_name}_${current_date}_${test_focus}.txt"
+log_file="log/${file_name}_${current_date}_${test_focus}.txt"
 test_description="
     Test description here.
 "
