@@ -88,6 +88,7 @@ Icon
 *.zip
 **/tests/bin/test_*
 *doc*/
+*port*
 
 # Junk
 z.junk
@@ -101,5 +102,5 @@ z.junk
 *.numbers
 
 # Logs
-*log*.md
+*log*
 

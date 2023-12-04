@@ -34,7 +34,7 @@ class RegionSize:
             if dmin > dmax:
                 raise ValueError(f"{name}min = {dmin} > {name}max = {dmax}")
 
-    def center(self) -> tuple[float]:
+    def center(self) -> Tuple[float, float, float]:
         """Return the center of the region."""
         return ((self.x3max + self.x3min) / 2.,
                 (self.x2max + self.x2min) / 2.,

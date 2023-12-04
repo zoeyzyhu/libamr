@@ -69,7 +69,8 @@ if __name__ == '__main__':
     #root.print_tree()
 
     # Launch actors based on the tree
-    ray.init(runtime_env={"py_modules": [me]})
+    ray.init(runtime_env={"py_modules": [me]},
+             num_cpus=4)
     actors = mg.launch_actors(root)
 
     # Refine an actor based on a point
