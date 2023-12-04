@@ -38,10 +38,11 @@ class MeshBlockActor:
         self.logicloc = (1, 1, 1)
         self.neighbors = {}
 
-    def new(self, node: me.BlockTree, coordinate_type: str = "cartesian") -> None:
+    def new(self, node: me.BlockTree, seed: int = 0,
+            coordinate_type: str = "cartesian") -> None:
         """Initialize MeshBlockActor from its tree node."""
         self.mblock = me.MeshBlock(node.size, coordinate_type)
-        self.mblock.allocate().fill_random()
+        self.mblock.allocate().fill_random(seed)
         self.logicloc = node.lx3, node.lx2, node.lx1
 
     def relaunch(self, refs: List[ObjectRef], root: me.BlockTree) -> None:

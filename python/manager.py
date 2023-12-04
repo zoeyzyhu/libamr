@@ -13,7 +13,8 @@ def launch_actors(root: me.BlockTree) -> Dict[Tuple[int, int, int], ObjectRef]:
     actors = {}
     if not root.children:
         actor = ac.MeshBlockActor.remote()
-        actor.new.remote(root)
+        seed = root.lx3 * 2 ^ 2 + root.lx2 * 2 + root.lx1
+        actor.new.remote(root, seed)
         actors[(root.lx3, root.lx2, root.lx1)] = actor
     else:
         for child in root.children:

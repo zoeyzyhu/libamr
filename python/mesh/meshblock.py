@@ -76,10 +76,10 @@ class MeshBlock:
             writeable=is_ghost
         )
 
-    def fill_random(self) -> Self:
+    def fill_random(self, seed) -> Self:
         """Fill interior zones with random values."""
         self.data.fill(-1)
-        # np.random.seed(seed) # remove me after testing
+        np.random.seed(seed)  # remove me after testing
         self.ghost[(0, 0, 0)][:] = np.random.uniform(0, 1, size=(
             self.size.nx3, self.size.nx2, self.size.nx1, self.size.nvar))
         self.is_ready = True
