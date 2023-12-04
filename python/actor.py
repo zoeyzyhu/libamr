@@ -18,7 +18,8 @@ def check_neighbor_ready(func):
 
         while waiting_actors:
             actor = waiting_actors.pop()
-            if not ray.get(actor.get_status.remote()):
+            ready = ray.get(actor.get_status.remote())
+            if not ready:
                 waiting_actors.add(actor)
                 continue
 

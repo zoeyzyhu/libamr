@@ -6,6 +6,7 @@ import mesh as me
 import actor as ac
 import manager as mg
 
+
 def test_launch_actors(tree):
     print("\n===== Test launch actors =====")
     actors = mg.launch_actors(tree)
@@ -71,13 +72,12 @@ if __name__ == '__main__':
     # Launch actors based on the tree
     ray.init(runtime_env={"py_modules": [me]})
     actors = mg.launch_actors(root)
-    mg.print_actors(actors)
+    mg.update_neighbors_all(actors, root)
     mg.update_ghosts_all(actors)
 
     # Refine an actor based on a point
-    #point_to_refine1 = (0, 29, 44)
-    #node = root.find_node(point_to_refine1)
-    #mg.print_actor_coord(point_to_refine1, root, actors)
-    #mg.refine_actor(point_to_refine1, root, actors)
-    #mg.update_ghosts_all(actors)
-    #mg.print_actor_children(node, actors)
+    point_to_refine1 = (0, 29, 44)
+    node = root.find_node(point_to_refine1)
+    mg.print_actor_coord(point_to_refine1, root, actors)
+    mg.refine_actor(point_to_refine1, root, actors)
+    mg.print_actor_children(node, actors)
