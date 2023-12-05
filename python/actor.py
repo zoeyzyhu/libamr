@@ -17,10 +17,10 @@ def check_neighbor_ready(func):
         waiting_actors = set(self.neighbors[offset])
 
         while waiting_actors:
-            actor = waiting_actors.pop()
+            actor, ll = waiting_actors.pop()
             ready = ray.get(actor.get_status.remote())
             if not ready:
-                waiting_actors.add(actor)
+                waiting_actors.add((actor, ll))
                 continue
 
         return func(self, offset)
@@ -124,7 +124,8 @@ class MeshBlockActor:
         neighbors = node.find_neighbors(offset, self.mblock.coord)
 
         self.neighbors[offset] = [
-            actors[(nb.lx3, nb.lx2, nb.lx1)] for nb in neighbors
+            (actors[(nb.lx3, nb.lx2, nb.lx1)],
+             (nb.lx3, nb.lx2, nb.lx1)) for nb in neighbors
         ]
 
     def level_diff(self, logicloc: Tuple[int, int, int]) -> int:
@@ -160,12 +161,13 @@ class MeshBlockActor:
 
         if len(nbs) > 1:  # neighbors at finer level
             tasks = [nb.get_restrict.remote(
-                nb_offset, self.mblock.coord) for nb in nbs]
+                nb_offset, self.mblock.coord) for nb, _ in nbs]
         # neighbor at coarser level
-        elif self.level_diff(ray.get(nbs[0].get_logicloc.remote())) > 0:
-            tasks = [nbs[0].get_prolong.remote(nb_offset, self.mblock.coord)]
+        elif self.level_diff(ray.get(nbs[0][0].get_logicloc.remote())) > 0:
+            tasks = [nbs[0][0].get_prolong.remote(
+                nb_offset, self.mblock.coord)]
         else:  # neighbor at same level
-            tasks = [nbs[0].get_view.remote(nb_offset)]
+            tasks = [nbs[0][0].get_view.remote(nb_offset)]
 
         return tasks
 
@@ -182,6 +184,11 @@ class MeshBlockActor:
     def get_coord(self) -> me.CoordinateFactory:
         """Return coord of mblock."""
         return self.mblock.coord
+
+    def get_neighbors(self) -> Dict[Tuple[int, int, int],
+                                    Tuple[ObjectRef, Tuple[int, int, int]]]:
+        """Get the neighbors of the mesh block."""
+        return self.neighbors
 
     def get_status(self) -> bool:
         """Get the status of the interior updates."""

@@ -55,13 +55,14 @@ def refine_actor_chain(node: me.BlockTree, root: me.BlockTree,
     new_actors = launch_actors(node)
 
     logicloc = node.lx3, node.lx2, node.lx1
-    old_avg = ray.get(actors[logicloc].get_avg.remote())
+    parent = actors[logicloc]
+    old_avg = ray.get(parent.get_avg.remote())
     print("old_avg=", old_avg)
 
     # For each child actor, fill in the interior data
     tasks = []
     for new_actor in new_actors.values():
-        new_actor.fill_interior_data.remote(actors[logicloc])
+        new_actor.fill_interior_data.remote(parent)
         tasks.append(new_actor.get_avg.remote())
 
     new_avg = sum(ray.get(tasks)) / len(new_actors)
@@ -75,20 +76,30 @@ def refine_actor_chain(node: me.BlockTree, root: me.BlockTree,
     print("new_avg(after)=", new_avg)
 
     # Get the coordinate of the parent actor to find neighbors
-    coord = ray.get(actors[logicloc].get_coord.remote())
-    for i in [-1, 0, 1]:
-        for j in [-1, 0, 1]:
-            for k in [-1, 0, 1]:
-                if i == 0 and j == 0 and k == 0:
-                    continue
-                offset = (i, j, k)
-                neighbors = node.find_neighbors(offset, coord)
-                for neighbor_node in neighbors:
-                    if neighbor_node is not None and neighbor_node.level - node.level < 0:
-                        refine_actor_chain(neighbor_node, root, actors)
+    coord = ray.get(parent.get_coord.remote())
+    offset_neighbor_dict = ray.get(parent.get_neighbors.remote())
+    neighbor_locs = []
+    for _, neighbor in offset_neighbor_dict.items():
+        if len(neighbor) == 0:
+            continue
+        if len(neighbor) == 1:
+            neighbor_locs.append(neighbor[0][1])
+        else:
+            for _, ll in neighbor:
+                neighbor_locs.append(ll)
+    print("neighbor_actors=", offset_neighbor_dict)
+    print("neighbor_locs=", neighbor_locs)
+
+    neighbor_nodes = []
+    for loc in neighbor_locs:
+        neighbor_nodes.append(root.find_node(loc))
+
+    for nb in neighbor_nodes:
+        if nb is not None and nb.level - node.level < 0:
+            refine_actor_chain(nb, root, actors)
 
     # Kill the parent actor, update the actors dict
-    ray.kill(actors[logicloc])
+    ray.kill(parent)
     actors.pop(logicloc)
     actors.update(new_actors)
 

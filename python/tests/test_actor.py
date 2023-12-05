@@ -81,3 +81,13 @@ if __name__ == '__main__':
     mg.print_actor_coord(point_to_refine1, root, actors)
     mg.refine_actor(point_to_refine1, root, actors)
     mg.print_actor_children(node, actors)
+
+    # Refine a refined block
+    #point_to_refine2 = (0, 40, 44)
+    #node = root.find_node(point_to_refine2)
+    #mg.print_actor_coord(point_to_refine2, root, actors)
+    #mg.refine_actor(point_to_refine2, root, actors)
+    #mg.print_actor_children(node, actors)
+
+    #print("\n===== After refine actors: Tree =====")
+    #mg.print_actors(actors)
