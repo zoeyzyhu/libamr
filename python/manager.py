@@ -54,11 +54,23 @@ def refine_actor_chain(node: me.BlockTree, root: me.BlockTree,
     node.split()
     new_actors = launch_actors(node)
 
-    # For each child actor, fill in the interior data
     logicloc = node.lx3, node.lx2, node.lx1
-    tasks = [new_actor.fill_interior_data.remote(actors[logicloc])
-             for new_actor in new_actors.values()]
-    ray.get(tasks)
+    old_sum = ray.get(actors[logicloc].get_sum.remote())
+    print("old_sum=", old_sum)
+
+    # For each child actor, fill in the interior data
+    tasks = []
+    for new_actor in new_actors.values():
+        new_actor.fill_interior_data.remote(actors[logicloc])
+        tasks.append(new_actor.get_sum.remote())
+
+    new_sum = sum(ray.get(tasks)) / len(new_actors)
+    print("new_sum=", new_sum)
+
+    diff_sum = (old_sum - new_sum) / len(new_actors)
+    print("diff_sum=", diff_sum)
+    for new_actor in new_actors.values():
+        new_actor.fix_interior_data.remote(diff_sum)
 
     # Get the coordinate of the parent actor to find neighbors
     coord = ray.get(actors[logicloc].get_coord.remote())

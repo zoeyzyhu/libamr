@@ -104,6 +104,18 @@ class MeshBlockActor:
                 parent_actor.get_restrict.remote((0, 0, 0), self.mblock.coord))
             logloc = (logloc[0], 1 - logloc[1], logloc[2])
             self.mblock.part((0, 0, 0), logloc)[:] = interior_view[0]
+    def get_sum(self) -> np.ndarray:
+        """Get the sum of the mesh block."""
+        nvar = self.mblock.data.shape[-1]
+        return np.array([self.mblock.view[(0,0,0)][:,:,:,i].sum() 
+                         for i in range(nvar)])
+
+    def fix_interior_data(self, diff: np.ndarray, logloc=None) -> None:
+        """Fix the internal data of the mesh block."""
+        nvar = self.mblock.data.shape[-1]
+        ngrids = self.mblock.view[(0,0,0)].size / nvar
+
+        self.mblock.ghost[(0,0,0)] += diff.reshape((1,1,1,-1)) / ngrids
         self.mblock.is_ready = True
 
     def update_neighbor(self, offset: Tuple[int, int, int], root: me.BlockTree,
