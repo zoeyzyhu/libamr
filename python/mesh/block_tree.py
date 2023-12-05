@@ -84,7 +84,8 @@ class BlockTree:
     def split(self) -> None:
         """Split the block into 8 sub-blocks."""
         if len(self.children) > 0:
-            raise ValueError("This block is not a leaf, can not split it")
+            raise ValueError(
+                f"This block is not a leaf, can not split it: {self.lx3, self.lx2, self.lx1}")
 
         locbit1_range = [0, 1]
         locbit2_range = [0, 1] if self.size.nx2 > 1 else [0]

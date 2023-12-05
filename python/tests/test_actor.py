@@ -67,13 +67,13 @@ if __name__ == '__main__':
     me.BlockTree.set_block_size(nx1=2, nx2=2, nx3=1)
     root = me.BlockTree(size)
     root.create_tree()
-    #root.print_tree()
 
     # Launch actors based on the tree
     ray.init(runtime_env={"py_modules": [me]})
     actors = mg.launch_actors(root)
     mg.update_neighbors_all(actors, root)
     mg.update_ghosts_all(actors)
+    
 
     # Refine an actor based on a point
     point_to_refine1 = (0, 29, 44)
@@ -83,11 +83,16 @@ if __name__ == '__main__':
     mg.print_actor_children(node, actors)
 
     # Refine a refined block
-    #point_to_refine2 = (0, 40, 44)
-    #node = root.find_node(point_to_refine2)
-    #mg.print_actor_coord(point_to_refine2, root, actors)
-    #mg.refine_actor(point_to_refine2, root, actors)
-    #mg.print_actor_children(node, actors)
+    point_to_refine2 = (0, 40, 44)
+    node = root.find_node(point_to_refine2)
+    mg.print_actor_coord(point_to_refine2, root, actors)
+    mg.refine_actor(point_to_refine2, root, actors)
+    mg.print_actor_children(node, actors)
+    #root.print_tree()
 
-    #print("\n===== After refine actors: Tree =====")
-    #mg.print_actors(actors)
+    # merge the finest blocks
+    point_to_merge = (0, 40, 44)
+    mg.merge_actor(point_to_merge, root, actors)
+    mg.print_actor_coord(point_to_merge, root, actors)
+
+    

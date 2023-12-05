@@ -17,10 +17,10 @@ def check_neighbor_ready(func):
         waiting_actors = set(self.neighbors[offset])
 
         while waiting_actors:
-            actor, ll = waiting_actors.pop()
+            actor = waiting_actors.pop()
             ready = ray.get(actor.get_status.remote())
             if not ready:
-                waiting_actors.add((actor, ll))
+                waiting_actors.add((actor))
                 continue
 
         return func(self, offset)
@@ -37,6 +37,7 @@ class MeshBlockActor:
         self.mblock = None
         self.logicloc = (1, 1, 1)
         self.neighbors = {}
+        self.neighbor_locs = {}
 
     def new(self, node: me.BlockTree, seed: int = 0,
             coordinate_type: str = "cartesian") -> None:
@@ -53,6 +54,7 @@ class MeshBlockActor:
         self.mblock.allocate(data.shape[-1])
         self.mblock.data[:] = data[:]
         self.neighbors = {}
+        self.neighbor_locs = {}
 
     def work(self) -> None:
         """Update the interior of the mesh block."""
@@ -108,13 +110,13 @@ class MeshBlockActor:
     def get_avg(self) -> np.ndarray:
         """Get the sum of the mesh block."""
         nvar = self.mblock.data.shape[-1]
-        ngrids = self.mblock.view[(0,0,0)].size / nvar
-        return np.array([self.mblock.view[(0,0,0)][:,:,:,i].sum() / ngrids
+        ngrids = self.mblock.view[(0, 0, 0)].size / nvar
+        return np.array([self.mblock.view[(0, 0, 0)][:, :, :, i].sum() / ngrids
                          for i in range(nvar)])
 
     def fix_interior_data(self, diff: np.ndarray, logloc=None) -> None:
         """Fix the internal data of the mesh block."""
-        self.mblock.ghost[(0,0,0)] += diff.reshape((1,1,1,-1))
+        self.mblock.ghost[(0, 0, 0)] += diff.reshape((1, 1, 1, -1))
         self.mblock.is_ready = True
 
     def update_neighbor(self, offset: Tuple[int, int, int], root: me.BlockTree,
@@ -124,8 +126,11 @@ class MeshBlockActor:
         neighbors = node.find_neighbors(offset, self.mblock.coord)
 
         self.neighbors[offset] = [
-            (actors[(nb.lx3, nb.lx2, nb.lx1)],
-             (nb.lx3, nb.lx2, nb.lx1)) for nb in neighbors
+            actors[(nb.lx3, nb.lx2, nb.lx1)] for nb in neighbors
+        ]
+
+        self.neighbor_locs[offset] = [
+            (nb.lx3, nb.lx2, nb.lx1) for nb in neighbors
         ]
 
     def level_diff(self, logicloc: Tuple[int, int, int]) -> int:
@@ -161,13 +166,13 @@ class MeshBlockActor:
 
         if len(nbs) > 1:  # neighbors at finer level
             tasks = [nb.get_restrict.remote(
-                nb_offset, self.mblock.coord) for nb, _ in nbs]
+                nb_offset, self.mblock.coord) for nb in nbs]
         # neighbor at coarser level
-        elif self.level_diff(ray.get(nbs[0][0].get_logicloc.remote())) > 0:
-            tasks = [nbs[0][0].get_prolong.remote(
+        elif self.level_diff(ray.get(nbs[0].get_logicloc.remote())) > 0:
+            tasks = [nbs[0].get_prolong.remote(
                 nb_offset, self.mblock.coord)]
         else:  # neighbor at same level
-            tasks = [nbs[0][0].get_view.remote(nb_offset)]
+            tasks = [nbs[0].get_view.remote(nb_offset)]
 
         return tasks
 
@@ -181,14 +186,14 @@ class MeshBlockActor:
         """Get the logic location of the mesh block."""
         return self.logicloc
 
+    def get_neighbor_locs(self) -> Dict[Tuple[int, int, int],
+                                        Tuple[ObjectRef, Tuple[int, int, int]]]:
+        """Get the list of my neighbors' logiclocs."""
+        return self.neighbor_locs
+
     def get_coord(self) -> me.CoordinateFactory:
         """Return coord of mblock."""
         return self.mblock.coord
-
-    def get_neighbors(self) -> Dict[Tuple[int, int, int],
-                                    Tuple[ObjectRef, Tuple[int, int, int]]]:
-        """Get the neighbors of the mesh block."""
-        return self.neighbors
 
     def get_status(self) -> bool:
         """Get the status of the interior updates."""
