@@ -58,9 +58,7 @@ def refine_actor_chain(node: me.BlockTree, root: me.BlockTree,
 
     tasks = [new_actor.fill_internal_data.remote(actors[logicloc])
              for new_actor in new_actors.values()]
-
-    while tasks:
-        _, tasks = ray.wait(tasks)
+    ray.get(tasks)
 
     ray.kill(actors[logicloc])
     actors.pop(logicloc)

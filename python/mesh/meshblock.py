@@ -85,6 +85,13 @@ class MeshBlock:
         self.is_ready = True
         return self
 
+    def fill_data(self, data) -> Self:
+        """Fill interior zones with random values."""
+        self.data.fill(-1)
+        self.ghost[(0, 0, 0)][:] = data
+        self.is_ready = True
+        return self
+
     def prolongated_view(self, my_offsets: (int, int, int),
                          finer: Coordinates) -> np.ndarray:
         """Prolongate a view to a finer mesh block."""
