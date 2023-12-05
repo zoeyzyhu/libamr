@@ -220,3 +220,12 @@ class BlockTree:
                f"lx2={str(bin(self.lx2))[2:]}, " + \
                f"lx1={str(bin(self.lx1))[2:]}\n" + \
                f"size={self.size}\nchildren={self.children}"
+
+    def __eq__(self, other) -> bool:
+        """Check if two BlockTree instances are equal."""
+        if isinstance(other, BlockTree):
+            return self.size == other.size and \
+                self.lx1 == other.lx1 and self.lx2 == other.lx2 and \
+                self.lx3 == other.lx3 and self.level == other.level and \
+                self.children == other.children
+        return False

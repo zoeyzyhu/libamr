@@ -50,20 +50,18 @@ def refine_actor(point: Tuple[int, int, int], root: me.BlockTree,
 def refine_actor_chain(node: me.BlockTree, root: me.BlockTree,
                        actors: Dict[Tuple[int, int, int], ObjectRef]) -> None:
     """Refine the block where the specified point locates."""
+    # Launch chidlren actors
     node.split()
-
-    logicloc = node.lx3, node.lx2, node.lx1
-    coord = ray.get(actors[logicloc].get_coord.remote())
     new_actors = launch_actors(node)
 
-    tasks = [new_actor.fill_internal_data.remote(actors[logicloc])
+    # For each child actor, fill in the interior data
+    logicloc = node.lx3, node.lx2, node.lx1
+    tasks = [new_actor.fill_interior_data.remote(actors[logicloc])
              for new_actor in new_actors.values()]
     ray.get(tasks)
 
-    ray.kill(actors[logicloc])
-    actors.pop(logicloc)
-    actors.update(new_actors)
-
+    # Get the coordinate of the parent actor to find neighbors
+    coord = ray.get(actors[logicloc].get_coord.remote())
     for i in [-1, 0, 1]:
         for j in [-1, 0, 1]:
             for k in [-1, 0, 1]:
@@ -74,6 +72,11 @@ def refine_actor_chain(node: me.BlockTree, root: me.BlockTree,
                 for neighbor_node in neighbors:
                     if neighbor_node is not None and neighbor_node.level - node.level < 0:
                         refine_actor_chain(neighbor_node, root, actors)
+
+    # Kill the parent actor, update the actors dict
+    ray.kill(actors[logicloc])
+    actors.pop(logicloc)
+    actors.update(new_actors)
 
 
 def merge_actor(point: Tuple[int, int, int], root: me.BlockTree,
@@ -152,7 +155,7 @@ def merge_actor_chain(node: me.BlockTree, root: me.BlockTree,
             logicloc = child.lx3, child.lx2, child.lx1
 
             tasks.append(list(new_actors.values())[
-                         0].fill_internal_data.remote(actors[logicloc], logicloc))
+                         0].fill_interior_data.remote(actors[logicloc], logicloc))
         print("task len", len(tasks))
         while tasks:
             _, tasks = ray.wait(tasks)

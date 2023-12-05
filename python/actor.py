@@ -13,8 +13,8 @@ import mesh as me
 def check_neighbor_ready(func):
     """Check if the neighbor is ready."""
 
-    def wrapper(self, offsets):
-        waiting_actors = set(self.neighbors[offsets])
+    def wrapper(self, offset):
+        waiting_actors = set(self.neighbors[offset])
 
         while waiting_actors:
             actor = waiting_actors.pop()
@@ -23,7 +23,7 @@ def check_neighbor_ready(func):
                 waiting_actors.add(actor)
                 continue
 
-        return func(self, offsets)
+        return func(self, offset)
 
     return wrapper
 
@@ -74,45 +74,45 @@ class MeshBlockActor:
         refs = ray.put([self.logicloc, self.mblock.data])
         return refs
 
-    def get_view(self, my_offsets: Tuple[int, int, int]) -> np.ndarray:
+    def get_view(self, my_offset: Tuple[int, int, int]) -> np.ndarray:
         """Get the view of the interior."""
-        nb_offsets = tuple(-x for x in my_offsets)
-        return self.mblock.view[my_offsets], self.logicloc, nb_offsets
+        nb_offset = tuple(-x for x in my_offset)
+        return self.mblock.view[my_offset], self.logicloc, nb_offset
 
-    def get_prolong(self, my_offsets: Tuple[int, int, int],
+    def get_prolong(self, my_offset: Tuple[int, int, int],
                     finer: me.Coordinates) -> np.ndarray:
         """Get the view of the mesh block with prolongation."""
-        nb_offsets = tuple(-x for x in my_offsets)
-        data = self.mblock.prolongated_view(my_offsets, finer)
-        return data, self.logicloc, nb_offsets
+        nb_offset = tuple(-x for x in my_offset)
+        data = self.mblock.prolongated_view(my_offset, finer)
+        return data, self.logicloc, nb_offset
 
-    def get_restrict(self, my_offsets: Tuple[int, int, int],
+    def get_restrict(self, my_offset: Tuple[int, int, int],
                      coarser: me.Coordinates) -> np.ndarray:
         """Get the view of the mesh block with restriction."""
-        nb_offsets = tuple(-x for x in my_offsets)
-        data = self.mblock.restricted_view(my_offsets, coarser)
-        return data, self.logicloc, nb_offsets
+        nb_offset = tuple(-x for x in my_offset)
+        data = self.mblock.restricted_view(my_offset, coarser)
+        return data, self.logicloc, nb_offset
 
-    def fill_internal_data(self, parent_actor: ObjectRef, logloc=None) -> None:
-        """Fill the internal data of the mesh block."""
-        if logloc is None:
-            internal_view = ray.get(
+    def fill_interior_data(self, parent_actor: ObjectRef, logloc=None) -> None:
+        """Fill the interior data of the mesh block."""
+        if logloc is None:  # prolongation
+            interior_view = ray.get(
                 parent_actor.get_prolong.remote((0, 0, 0), self.mblock.coord))
-            self.mblock.fill_data(internal_view[0])
-        else:
-            internal_view = ray.get(
+            self.mblock.fill_data(interior_view[0])
+        else:  # restriction
+            interior_view = ray.get(
                 parent_actor.get_restrict.remote((0, 0, 0), self.mblock.coord))
             logloc = (logloc[0], 1 - logloc[1], logloc[2])
-            self.mblock.part((0, 0, 0), logloc)[:] = internal_view[0]
+            self.mblock.part((0, 0, 0), logloc)[:] = interior_view[0]
         self.mblock.is_ready = True
 
-    def update_neighbor(self, offsets: Tuple[int, int, int], root: me.BlockTree,
+    def update_neighbor(self, offset: Tuple[int, int, int], root: me.BlockTree,
                         actors: Dict[Tuple[int, int, int], ObjectRef]) -> None:
         """Update the neighbors of the mesh block."""
         node = root.find_node(self.mblock.size.center())
-        neighbors = node.find_neighbors(offsets, self.mblock.coord)
+        neighbors = node.find_neighbors(offset, self.mblock.coord)
 
-        self.neighbors[offsets] = [
+        self.neighbors[offset] = [
             actors[(nb.lx3, nb.lx2, nb.lx1)] for nb in neighbors
         ]
 
@@ -127,34 +127,34 @@ class MeshBlockActor:
         ready_tasks, remain_tasks = ray.wait(tasks)
 
         for task in ready_tasks:
-            view, logicloc, offsets = ray.get(task)
+            view, logicloc, offset = ray.get(task)
             if self.level_diff(logicloc) < 0:  # neighbor at finer level
-                self.mblock.part(offsets, logicloc)[:] = view
+                self.mblock.part(offset, logicloc)[:] = view
             else:
-                self.mblock.ghost[offsets][:] = view
+                self.mblock.ghost[offset][:] = view
 
         return remain_tasks
 
     @check_neighbor_ready
-    def update_ghost(self, offsets: Tuple[int, int, int]) -> [ObjectRef]:
+    def update_ghost(self, offset: Tuple[int, int, int]) -> [ObjectRef]:
         """Launch ghost-cell tasks."""
-        if offsets not in self.neighbors:
+        if offset not in self.neighbors:
             return []
 
-        nbs = self.neighbors[offsets]
+        nbs = self.neighbors[offset]
         if len(nbs) == 0:
             return []
 
-        nb_offsets = tuple(-x for x in offsets)
+        nb_offset = tuple(-x for x in offset)
 
         if len(nbs) > 1:  # neighbors at finer level
             tasks = [nb.get_restrict.remote(
-                nb_offsets, self.mblock.coord) for nb in nbs]
+                nb_offset, self.mblock.coord) for nb in nbs]
         # neighbor at coarser level
         elif self.level_diff(ray.get(nbs[0].get_logicloc.remote())) > 0:
-            tasks = [nbs[0].get_prolong.remote(nb_offsets, self.mblock.coord)]
+            tasks = [nbs[0].get_prolong.remote(nb_offset, self.mblock.coord)]
         else:  # neighbor at same level
-            tasks = [nbs[0].get_view.remote(nb_offsets)]
+            tasks = [nbs[0].get_view.remote(nb_offset)]
 
         return tasks
 
