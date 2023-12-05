@@ -55,22 +55,24 @@ def refine_actor_chain(node: me.BlockTree, root: me.BlockTree,
     new_actors = launch_actors(node)
 
     logicloc = node.lx3, node.lx2, node.lx1
-    old_sum = ray.get(actors[logicloc].get_sum.remote())
-    print("old_sum=", old_sum)
+    old_avg = ray.get(actors[logicloc].get_avg.remote())
+    print("old_avg=", old_avg)
 
     # For each child actor, fill in the interior data
     tasks = []
     for new_actor in new_actors.values():
         new_actor.fill_interior_data.remote(actors[logicloc])
-        tasks.append(new_actor.get_sum.remote())
+        tasks.append(new_actor.get_avg.remote())
 
-    new_sum = sum(ray.get(tasks)) / len(new_actors)
-    print("new_sum=", new_sum)
+    new_avg = sum(ray.get(tasks)) / len(new_actors)
+    print("new_avg(before)=", new_avg)
 
-    diff_sum = (old_sum - new_sum) / len(new_actors)
-    print("diff_sum=", diff_sum)
     for new_actor in new_actors.values():
-        new_actor.fix_interior_data.remote(diff_sum)
+        new_actor.fix_interior_data.remote(old_avg - new_avg)
+
+    tasks = [new_actor.get_avg.remote() for new_actor in new_actors.values()]
+    new_avg = sum(ray.get(tasks)) / len(new_actors)
+    print("new_avg(after)=", new_avg)
 
     # Get the coordinate of the parent actor to find neighbors
     coord = ray.get(actors[logicloc].get_coord.remote())
