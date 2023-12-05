@@ -1,4 +1,4 @@
-# pylint: disable = import-error, too-many-arguments, undefined-variable, unused-argument, redefined-outer-name, too-few-public-methods, no-member, pointless-string-statement
+# pylint: disable = import-error, too-many-arguments, undefined-variable, too-many-public-methods, unused-argument, redefined-outer-name, too-few-public-methods, no-member, pointless-string-statement
 """Module containing MeshBlockActor class and related functions."""
 
 from math import floor, log2
@@ -56,6 +56,10 @@ class MeshBlockActor:
         self.neighbors = {}
         self.neighbor_locs = {}
 
+    def reset_status(self) -> None:
+        """Reset the status of the mesh block."""
+        self.mblock.is_ready = False
+
     def work(self) -> None:
         """Update the interior of the mesh block."""
         time.sleep(1)
@@ -64,13 +68,25 @@ class MeshBlockActor:
         x = np.random.rand(1)
         if x[0] < thresholds[0]:
             return -1, point  # coarsen
-        if x[0] > thresholds[1]:
-            return 1, point  # refine
+        # if x[0] > thresholds[1]:
+        #    return 1, point  # refine
         return 0, point
 
-    def reset_status(self) -> None:
-        """Reset the status of the mesh block."""
-        self.mblock.is_ready = False
+    def run_stencil(self) -> None:
+        """Calculate stencil for interior block."""
+        if not self.mblock.is_ready:
+            raise ValueError("interior matrix is not ready")
+
+        for row in range(self.mblock.size.nghost,
+                         self.mblock.size.nghost + self.mblock.size.nx1):
+            for col in range(self.mblock.size.nghost,
+                             self.mblock.size.nghost + self.mblock.size.nx2):
+                self.mblock.data[:, col, row] = \
+                    self.mblock.data[:, col, row + 1] \
+                    + self.mblock.data[:, col, row - 1] \
+                    + self.mblock.data[:, col + 1, row] \
+                    + self.mblock.data[:, col - 1, row] \
+                    - 4 * self.mblock.data[:, col, row]
 
     def put_data(self):
         """Put the mesh block in Plasma store."""

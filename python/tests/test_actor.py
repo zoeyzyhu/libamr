@@ -73,17 +73,8 @@ if __name__ == '__main__':
     actors = mg.launch_actors(root)
     mg.update_neighbors_all(actors, root)
     mg.update_ghosts_all(actors)
-    
-    mg.orchestrate_actor(actors, root)
-    print("\n===== After orchestrate actors: Tree =====")
-    mg.print_actors(actors)
 
-
-    #update_ghosts_all(actors)
-    #for _, actor in actors.items():
-    #    actor.reset_status.remote()
-
-    """
+   
     # Refine an actor based on a point
     point_to_refine1 = (0, 29, 44)
     node = root.find_node(point_to_refine1)
@@ -97,11 +88,15 @@ if __name__ == '__main__':
     mg.print_actor_coord(point_to_refine2, root, actors)
     mg.refine_actor(point_to_refine2, root, actors)
     mg.print_actor_children(node, actors)
-    #root.print_tree()
+    root.print_tree()
 
     # merge the finest blocks
     #point_to_merge = (0, 40, 44)
     #mg.merge_actor(point_to_merge, root, actors)
     #mg.print_actor_coord(point_to_merge, root, actors)
-    """
+
     
+    mg.orchestrate_actor(actors, root)
+    print("\n===== After orchestrate actors: Tree =====")
+    root.print_tree()
+    mg.print_actors(actors)

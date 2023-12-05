@@ -28,18 +28,16 @@ def orchestrate_actor(actors: Dict[Tuple[int, int, int], ObjectRef],
     """Orchestrate the actors for a round (one time cycle)."""
     actor_dict = actors.copy()
     for logicloc, actor in actor_dict.items():
-        action, point = ray.get(actor.work.remote())
-        print("Center:", point)
+        if logicloc not in actors:
+            continue
+        action, center = ray.get(actor.work.remote())
+        print("Center:", center)
         if action == 1:
             print("Refine actor: ********************************************", logicloc)
-            refine_actor(point, root, actors)
-            # print_actors(actors)
-
+            refine_actor(center, root, actors)
         elif action == -1:
             print("Merge actor: *********************************************", logicloc)
-            merge_actor(point, root, actors)
-            # print_actors(actors)
-
+            merge_actor(center, root, actors)
         else:
             print("No action.")
             continue
@@ -54,7 +52,6 @@ def refine_actor(point: Tuple[int, int, int], root: me.BlockTree,
     node = root.find_node(point)
     refine_actor_chain(node, root, actors)
     update_neighbors_all(actors, root)
-    new_node = root.find_node(point)
 
 
 def refine_actor_chain(node: me.BlockTree, root: me.BlockTree,
@@ -106,6 +103,12 @@ def merge_actor(point: Tuple[int, int, int], root: me.BlockTree,
     """Merge the block where the specified point locates."""
     node = root.find_node(point)
     parent = node.parent
+
+    if (parent.size.nx3 != node.size.nx3 or
+        parent.size.nx2 != node.size.nx2 or
+            parent.size.nx1 != node.size.nx1):
+        return
+
     mergeable = True
 
     for child in parent.children:
@@ -117,10 +120,6 @@ def merge_actor(point: Tuple[int, int, int], root: me.BlockTree,
     if mergeable:
         merge_actor_chain(node, root, actors)
         update_neighbors_all(actors, root)
-    else:
-        raise ValueError("The block cannot be merged.")
-
-    new_node = root.find_node(point)
 
 
 def check_mergeability(node: me.BlockTree, root: me.BlockTree,
