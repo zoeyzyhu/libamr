@@ -58,14 +58,15 @@ class MeshBlockActor:
 
     def work(self) -> None:
         """Update the interior of the mesh block."""
-        time.sleep(10)
-        thresholds = (0.1, 0.9)  # coarsen, refine
+        time.sleep(1)
+        thresholds = (0.2, 0.8)  # coarsen, refine
+        point = self.mblock.size.center()
         x = np.random.rand(1)
-        if x < thresholds[0]:
-            return -1  # coarsen
-        if x > thresholds[1]:
-            return 1  # refine
-        return 0
+        if x[0] < thresholds[0]:
+            return -1, point  # coarsen
+        if x[0] > thresholds[1]:
+            return 1, point  # refine
+        return 0, point
 
     def reset_status(self) -> None:
         """Reset the status of the mesh block."""

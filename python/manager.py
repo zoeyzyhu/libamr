@@ -26,13 +26,22 @@ def launch_actors(root: me.BlockTree) -> Dict[Tuple[int, int, int], ObjectRef]:
 def orchestrate_actor(actors: Dict[Tuple[int, int, int], ObjectRef],
                       root: me.BlockTree) -> None:
     """Orchestrate the actors for a round (one time cycle)."""
-    for _, actor in actors.items():
-        action = ray.get(actor.work.remote())
-        if action == "refine":
-            refine_actor(actor.logicloc, root, actors)
-        elif action == "merge":
-            merge_actor(actor.logicloc, root, actors)
+    actor_dict = actors.copy()
+    for logicloc, actor in actor_dict.items():
+        action, point = ray.get(actor.work.remote())
+        print("Center:", point)
+        if action == 1:
+            print("Refine actor: ********************************************", logicloc)
+            refine_actor(point, root, actors)
+            # print_actors(actors)
+
+        elif action == -1:
+            print("Merge actor: *********************************************", logicloc)
+            merge_actor(point, root, actors)
+            # print_actors(actors)
+
         else:
+            print("No action.")
             continue
     update_ghosts_all(actors)
     for _, actor in actors.items():
@@ -45,6 +54,7 @@ def refine_actor(point: Tuple[int, int, int], root: me.BlockTree,
     node = root.find_node(point)
     refine_actor_chain(node, root, actors)
     update_neighbors_all(actors, root)
+    new_node = root.find_node(point)
 
 
 def refine_actor_chain(node: me.BlockTree, root: me.BlockTree,
@@ -109,6 +119,8 @@ def merge_actor(point: Tuple[int, int, int], root: me.BlockTree,
         update_neighbors_all(actors, root)
     else:
         raise ValueError("The block cannot be merged.")
+
+    new_node = root.find_node(point)
 
 
 def check_mergeability(node: me.BlockTree, root: me.BlockTree,
@@ -219,6 +231,12 @@ def print_actors(actors: Dict[Tuple[int, int, int], ObjectRef]) -> None:
         print(f"\nNode:{node_id}\nWorker:{worker_id}\nlogicloc:{ll}")
         print(f"size = {mblock.size}")
         mblock.print_data()
+
+
+def print_actor_status(actors: Dict[Tuple[int, int, int], ObjectRef]) -> None:
+    """Print the mesh block."""
+    for ll in actors:
+        print(ray.get(actors[ll].get_status.remote()))
 
 
 def print_actor(actor: ObjectRef) -> None:
