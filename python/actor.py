@@ -1,9 +1,10 @@
-# pylint: disable = import-error, too-many-arguments, undefined-variable, too-many-public-methods, unused-argument, redefined-outer-name, too-few-public-methods, no-member, pointless-string-statement
+# pylint: disable = import-error, unspecified-encoding, too-many-arguments, undefined-variable, too-many-public-methods, unused-argument, redefined-outer-name, too-few-public-methods, no-member, pointless-string-statement
 """Module containing MeshBlockActor class and related functions."""
 
 from math import floor, log2
 from typing import Tuple, Dict, List
 import time
+from datetime import datetime
 import ray
 from ray import ObjectRef
 import numpy as np
@@ -28,7 +29,7 @@ def check_neighbor_ready(func):
     return wrapper
 
 
-@ray.remote
+@ray.remote(num_cpus=1)
 class MeshBlockActor:
     """Remotely launch actors as mesh blocks."""
 
@@ -62,7 +63,24 @@ class MeshBlockActor:
 
     def work(self) -> None:
         """Update the interior of the mesh block."""
-        time.sleep(1)
+        start_time = time.time()
+        target_duration = 150  # seconds
+
+        while time.time() - start_time < target_duration:
+            self.run_stencil()
+
+        stime = datetime.fromtimestamp(
+            start_time).strftime('%Y-%m-%d %H:%M:%S')
+        etime = datetime.fromtimestamp(
+            time.time()).strftime('%Y-%m-%d %H:%M:%S')
+        duration = time.time() - start_time
+
+        with open(f"log/work_{self.logicloc}.txt", "w") as f:
+            f.write(f"\n\n\n{self.logicloc} {self.mblock.is_ready}\n")
+            f.write(f"Start time: {stime}\n")
+            f.write(f"End time: {etime}\n")
+            f.write(f"Duration: {duration} seconds\n")
+
         thresholds = (0.2, 0.8)  # coarsen, refine
         point = self.mblock.size.center()
         x = np.random.rand(1)

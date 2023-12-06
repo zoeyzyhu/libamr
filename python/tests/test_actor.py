@@ -1,4 +1,6 @@
 
+import os
+os.environ['RAY_SCHEDULER_SPREAD_THRESHOLD'] = '0.0001'
 import sys
 import ray
 sys.path.append('../')
@@ -88,7 +90,7 @@ if __name__ == '__main__':
     mg.print_actor_coord(point_to_refine2, root, actors)
     mg.refine_actor(point_to_refine2, root, actors)
     mg.print_actor_children(node, actors)
-    root.print_tree()
+    #root.print_tree()
 
     # merge the finest blocks
     #point_to_merge = (0, 40, 44)
@@ -97,6 +99,6 @@ if __name__ == '__main__':
 
     
     mg.orchestrate_actor(actors, root)
-    print("\n===== After orchestrate actors: Tree =====")
-    root.print_tree()
-    mg.print_actors(actors)
+    #print("\n===== After orchestrate actors: Tree =====")
+    #root.print_tree()
+    #mg.print_actors(actors)

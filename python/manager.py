@@ -26,11 +26,17 @@ def launch_actors(root: me.BlockTree) -> Dict[Tuple[int, int, int], ObjectRef]:
 def orchestrate_actor(actors: Dict[Tuple[int, int, int], ObjectRef],
                       root: me.BlockTree) -> None:
     """Orchestrate the actors for a round (one time cycle)."""
-    actor_dict = actors.copy()
-    for logicloc, actor in actor_dict.items():
+    tasks = [actor.work.remote() for actor in actors.values()]
+    results = ray.get(tasks)
+    actions = {logicloc: (actor_ref, result)
+               for logicloc, actor_ref, result in
+               zip(actors.keys(), actors.values(), results)}
+
+    print("Actions:", actions)
+
+    for logicloc, (actor, (action, center)) in actions.items():
         if logicloc not in actors:
             continue
-        action, center = ray.get(actor.work.remote())
         print("Center:", center)
         if action == 1:
             print("Refine actor: ********************************************", logicloc)
