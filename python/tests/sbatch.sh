@@ -46,7 +46,8 @@ echo "IP Head: $ip_head"
 echo "Starting HEAD at $head_node"
 srun --nodes=1 --ntasks=1 -w "$head_node" \
     ray start --head --node-ip-address="$head_node_ip" \
-    --port=$head_node_port --block &
+    --port=$head_node_port --block \
+    --dashboard-host 0.0.0.0 --dashboard-port 8265 &
 
 # Optional; may be useful in Ray versions < 1.0.
 sleep 10
