@@ -9,7 +9,7 @@ import ray
 from ray import ObjectRef
 import numpy as np
 import mesh as me
-import random 
+import random
 
 
 def check_neighbor_ready(func):
@@ -30,6 +30,8 @@ def check_neighbor_ready(func):
     return wrapper
 
 
+def diffusion_2d(arr):
+    return arr[1:-1,:-2] + arr[1:-1,2:] + arr[2:,1:-1] + arr[:-2,1:-1] - 4. * arr[1:-1,1:-1]
 
 @ray.remote(num_cpus=1)
 class MeshBlockActor:
@@ -82,43 +84,38 @@ class MeshBlockActor:
             f.write(f"Duration: {duration} seconds\n")
 
         thresholds = (0.2, 0.8)  # coarsen, refine
-        return self.check_refine(*thresholds), self.mblock.size.center()
+        return self.check_refine(*thresholds)
 
-    def run_stencil(self) -> None:
+    def run_stencil(self, kernel_func = diffusion_2d) -> None:
         """Calculate stencil for interior block."""
         if not self.mblock.is_ready:
             raise ValueError("interior matrix is not ready")
 
-        def diffusion_2d(arr):
-            return arr[0,1:-1,:-2,:] + arr[0,1:-1,2:,:] \
-                    + arr[0,2:,1:-1,:] + arr[0,:-2,1:-1,:] \
-                    - 4. * arr[0,1:-1,1:-1,:]
-
         level = floor(log2(self.logicloc[2]))
 
         diffusivity = min(0.0000001 * (2 ** level), 1.)
-        iter_times = 10000 * level
+        iter_time = 10000 * level
         key = (0,0,0)
 
         for n in range(iter_times):
-            self.mblock.ghost[key] += diffusivity * diffusion_2d(self.mblock.data)
+            self.ghost[key] += diffusivity * kernel_func(self.mblock.data)
 
         #for n in range(10):
         #    i = random.randint(0, self.mblock.size.nx1)
         #    j = random.randint(0, self.mblock.size.nx2)
-        #    self.mblock.ghost[key][i,j] += np.random.normal(0, 10.) / level
+        #    self.ghost[key][i,j] += np.random.normal(0, 10.) / level
 
-    def check_refine(self, low: float, high: float) -> int:
+    def check_refine(low: float, high: float) -> int:
         key = (0,0,0)
 
-        ddx = abs(self.mblock.data[0,1:-1,1:,:] - self.mblock.data[0,1:-1,:-1,:])
+        ddx = abs(self.mblock.data[1:-1,1:] - self.mblock.data[1:-1,:-1])
         dx = self.mblock.coord.x1v[1] - self.mblock.coord.x1v[0]
         ddx_min, ddx_max = ddx.min() / dx, ddx.max() / dx
 
         if ddx_max > high:
             return 1
 
-        ddy = abs(self.mblock.data[0,1:,1:-1,:] - self.mblock.data[0,:-1,1:-1,:])
+        ddy = abs(self.mblock.data[1:,1:-1] - self.mblock.data[:-1,1:-1])
         dy = self.mblock.coord.x2v[1] - self.mblock.coord.x2v[0]
         ddy_min, ddy_max = ddy.min() / dy, ddy.max() / dy
 
