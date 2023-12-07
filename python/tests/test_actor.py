@@ -75,6 +75,7 @@ if __name__ == '__main__':
     actors = mg.launch_actors(root)
     mg.update_neighbors_all(actors, root)
     mg.update_ghosts_all(actors)
+    mg.print_actors(actors)
    
     # Refine an actor based on a point
     #point_to_refine1 = (0, 29, 44)
@@ -96,7 +97,6 @@ if __name__ == '__main__':
     #mg.merge_actor(point_to_merge, root, actors)
     #mg.print_actor_coord(point_to_merge, root, actors)
 
-    mg.orchestrate_actor(actors, root)
+    #mg.orchestrate_actor(actors, root)
     #print("\n===== After orchestrate actors: Tree =====")
     #root.print_tree()
-    #mg.print_actors(actors)

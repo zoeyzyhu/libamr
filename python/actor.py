@@ -11,7 +11,6 @@ import numpy as np
 import mesh as me
 import random 
 
-
 def check_neighbor_ready(func):
     """Check if the neighbor is ready."""
 
@@ -28,8 +27,6 @@ def check_neighbor_ready(func):
         return func(self, offset)
 
     return wrapper
-
-
 
 @ray.remote(num_cpus=1)
 class MeshBlockActor:
@@ -96,8 +93,8 @@ class MeshBlockActor:
 
         level = floor(log2(self.logicloc[2]))
 
-        diffusivity = min(0.0000001 * (2 ** level), 1.)
-        iter_times = 10000 * level
+        diffusivity = min(0.00001 * (2 ** level), 1.)
+        iter_times = 100000 * level
         key = (0,0,0)
 
         for n in range(iter_times):

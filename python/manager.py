@@ -7,7 +7,6 @@ from ray import ObjectRef
 import mesh as me
 import actor as ac
 
-
 def launch_actors(root: me.BlockTree) -> Dict[Tuple[int, int, int], ObjectRef]:
     """Launch actors based on the tree."""
     actors = {}
@@ -21,6 +20,21 @@ def launch_actors(root: me.BlockTree) -> Dict[Tuple[int, int, int], ObjectRef]:
             if child:
                 actors.update(launch_actors(child))
     return actors
+
+class MeshManager:
+    def __init__(self, root: me.BlockTree, 
+                 coordinate_type: str = "cartesian") -> None:
+        """Initialize MeshManager."""
+        self.root = root
+        self.actors = launch_actors(root)
+        update_neighbors_all(self.actors, self.root)
+        update_ghosts_all(self.actors)
+
+    def run_one_step(self) -> None:
+        """Run one step of the simulation."""
+        tasks = [actor.work.remote() for actor in self.actors.values()]
+        results = ray.get(tasks)
+        print("Results:", results)
 
 
 def orchestrate_actor(actors: Dict[Tuple[int, int, int], ObjectRef],

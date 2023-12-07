@@ -78,7 +78,7 @@ class MeshBlock:
 
     def fill_random(self, seed) -> Self:
         """Fill interior zones with random values."""
-        self.data.fill(-1)
+        self.data.fill(0)
         np.random.seed(seed)  # remove me after testing
         self.ghost[(0, 0, 0)][:] = np.random.uniform(0, 1, size=(
             self.size.nx3, self.size.nx2, self.size.nx1, self.size.nvar))
