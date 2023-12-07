@@ -20,7 +20,9 @@ if __name__ == '__main__':
     mesh = mg.MeshManager(root)
     #mg.print_actors(mesh.actors)
 
-    mesh.run_one_step()
+    for i in range(100):
+        print(f"===== Step {i} =====")
+        mesh.run_one_step()
 
     #mg.print_actors(mesh.actors)
     print("after run one step...")

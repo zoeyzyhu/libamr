@@ -34,6 +34,7 @@ class MeshManager:
         """Run one step of the simulation."""
         tasks = [actor.work.remote() for actor in self.actors.values()]
         results = ray.get(tasks)
+        update_ghosts_all(self.actors)
         print("Results:", results)
 
 

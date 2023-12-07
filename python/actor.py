@@ -79,7 +79,7 @@ class MeshBlockActor:
             f.write(f"Duration: {duration} seconds\n")
 
         thresholds = (0.2, 0.8)  # coarsen, refine
-        return self.check_refine(*thresholds), self.mblock.size.center()
+        return self.check_refine(*thresholds)
 
     def run_stencil(self) -> None:
         """Calculate stencil for interior block."""
@@ -93,17 +93,17 @@ class MeshBlockActor:
 
         level = floor(log2(self.logicloc[2]))
 
-        diffusivity = min(0.00001 * (2 ** level), 1.)
-        iter_times = 100000 * level
+        diffusivity = min(0.0000001 * (2 ** level), 1.)
+        iter_times = 1000 * level
         key = (0,0,0)
 
         for n in range(iter_times):
             self.mblock.ghost[key] += diffusivity * diffusion_2d(self.mblock.data)
 
-        #for n in range(10):
-        #    i = random.randint(0, self.mblock.size.nx1)
-        #    j = random.randint(0, self.mblock.size.nx2)
-        #    self.mblock.ghost[key][i,j] += np.random.normal(0, 10.) / level
+        for n in range(1):
+            i = random.randint(0, self.mblock.size.nx1-1)
+            j = random.randint(0, self.mblock.size.nx2-1)
+            self.mblock.ghost[key][0,j,i,0] += np.random.normal(0, 1.)
 
     def check_refine(self, low: float, high: float) -> int:
         key = (0,0,0)
