@@ -93,7 +93,7 @@ class MeshBlockActor:
 
         level = floor(log2(self.logicloc[2]))
 
-        diffusivity = min(0.0000001 * (2 ** level), 1.)
+        diffusivity = min(0.00001 * (10 ** level), 1.)
         iter_times = 1000 * level
         key = (0,0,0)
 
@@ -103,7 +103,7 @@ class MeshBlockActor:
         for n in range(1):
             i = random.randint(0, self.mblock.size.nx1-1)
             j = random.randint(0, self.mblock.size.nx2-1)
-            self.mblock.ghost[key][0,j,i,0] += np.random.normal(0, 1.)
+            self.mblock.ghost[key][0,j,i,0] += np.random.normal(0, 1. / level)
 
     def check_refine(self, low: float, high: float) -> int:
         key = (0,0,0)

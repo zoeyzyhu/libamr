@@ -88,6 +88,8 @@ class MeshManager:
     def refine_actor(self, logicloc: Tuple[int, int, int], node=None) -> None:
         """Refine the block where the specified point locates."""
         node = self.root.find_node_by_logicloc(logicloc)
+        if node is None:
+            return
         self.refine_actor_chain(node)
         self.update_neighbors_all()
 
@@ -135,6 +137,8 @@ class MeshManager:
     def merge_actor(self, logicloc: Tuple[int, int, int]) -> None:
         """Merge the block where the specified point locates."""
         node = self.root.find_node_by_logicloc(logicloc)
+        if node is None:
+            return
         parent = node.parent
 
         if (parent.size.nx3 != node.size.nx3 or
@@ -164,9 +168,52 @@ class MeshManager:
                     neighbors = node.find_neighbors(offset, coord)
                     for nb in neighbors:
                         if nb is not None and nb.level - node.level >= 1:
-                            if not check_mergeability(nb, self.root, self.actors):
+                            if not self.check_mergeability(nb):
                                 return False
         return True
+
+    def merge_actor_chain(self, node: me.BlockTree) -> None:
+        """Merge the block where the specified point locates."""
+        parent = node.parent
+        logicloc = node.lx3, node.lx2, node.lx1
+        if logicloc not in self.actors:
+            return
+
+        for child in parent.children:
+            child_logicloc = child.lx3, child.lx2, child.lx1
+            coord = ray.get(self.actors[child_logicloc].get_coord.remote())
+
+            for i in [-1, 0, 1]:
+                for j in [-1, 0, 1]:
+                    for k in [-1, 0, 1]:
+                        if i == 0 and j == 0 and k == 0:
+                            continue
+                        offset = (i, j, k)
+                        neighbors = node.find_neighbors(offset, coord)
+                        for nb in neighbors:
+                            if nb is not None and nb.level - node.level >= 1:
+                                self.merge_actor_chain(nb)
+
+        p_lx3, p_lx2, p_lx1 = parent.lx3, parent.lx2, parent.lx1
+        if (p_lx3, p_lx2, p_lx1) not in self.actors:
+            children = parent.children.copy()
+            parent.merge()
+            new_actors = launch_actors(parent)
+
+            tasks = []
+            for child in children:
+                logicloc = child.lx3, child.lx2, child.lx1
+
+                tasks.append(list(new_actors.values())[
+                             0].fill_interior_data.remote(self.actors[logicloc], logicloc))
+            ray.get(tasks)
+
+            for child in children:
+                logicloc = child.lx3, child.lx2, child.lx1
+                ray.kill(self.actors[logicloc])
+                self.actors.pop(logicloc)
+
+            self.actors.update(new_actors)
 
 def orchestrate_actor(actors: Dict[Tuple[int, int, int], ObjectRef],
                       root: me.BlockTree) -> None:
@@ -197,49 +244,6 @@ def orchestrate_actor(actors: Dict[Tuple[int, int, int], ObjectRef],
         actor.reset_status.remote()
 
 
-def merge_actor_chain(node: me.BlockTree, root: me.BlockTree,
-                      actors: Dict[Tuple[int, int, int], ObjectRef]) -> None:
-    """Merge the block where the specified point locates."""
-    parent = node.parent
-    logicloc = node.lx3, node.lx2, node.lx1
-    if logicloc not in actors:
-        return
-
-    for child in parent.children:
-        child_logicloc = child.lx3, child.lx2, child.lx1
-        coord = ray.get(actors[child_logicloc].get_coord.remote())
-
-        for i in [-1, 0, 1]:
-            for j in [-1, 0, 1]:
-                for k in [-1, 0, 1]:
-                    if i == 0 and j == 0 and k == 0:
-                        continue
-                    offset = (i, j, k)
-                    neighbors = node.find_neighbors(offset, coord)
-                    for nb in neighbors:
-                        if nb is not None and nb.level - node.level >= 1:
-                            merge_actor_chain(nb, root, actors)
-
-    p_lx3, p_lx2, p_lx1 = parent.lx3, parent.lx2, parent.lx1
-    if (p_lx3, p_lx2, p_lx1) not in actors:
-        children = parent.children.copy()
-        parent.merge()
-        new_actors = launch_actors(parent)
-
-        tasks = []
-        for child in children:
-            logicloc = child.lx3, child.lx2, child.lx1
-
-            tasks.append(list(new_actors.values())[
-                         0].fill_interior_data.remote(actors[logicloc], logicloc))
-        ray.get(tasks)
-
-        for child in children:
-            logicloc = child.lx3, child.lx2, child.lx1
-            ray.kill(actors[logicloc])
-            actors.pop(logicloc)
-
-        actors.update(new_actors)
 
 
 def print_actors(actors: Dict[Tuple[int, int, int], ObjectRef]) -> None:
