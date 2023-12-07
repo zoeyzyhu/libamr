@@ -27,16 +27,94 @@ class MeshManager:
         """Initialize MeshManager."""
         self.root = root
         self.actors = launch_actors(root)
-        update_neighbors_all(self.actors, self.root)
-        update_ghosts_all(self.actors)
+        self.update_neighbors_all()
+        self.update_ghosts_all()
 
     def run_one_step(self) -> None:
         """Run one step of the simulation."""
         tasks = [actor.work.remote() for actor in self.actors.values()]
         results = ray.get(tasks)
-        update_ghosts_all(self.actors)
+        self.update_ghosts_all()
         print("Results:", results)
 
+    def update_neighbors_all(self) -> None:
+        """Update neighbors for all actors."""
+        for _, actor in self.actors.items():
+            for o3 in [-1, 0, 1]:
+                for o2 in [-1, 0, 1]:
+                    for o1 in [-1, 0, 1]:
+                        if o3 == o2 == o1 == 0:
+                            continue
+                        offsets = (o3, o2, o1)
+                        actor.update_neighbor.remote(offsets, self.root, self.actors)
+
+    def update_ghosts_all(self) -> None:
+        """Update ghost cells for all actors."""
+        tasks = {}
+
+        for actor in self.actors.values():
+            tasks[actor] = []
+            for o3 in [-1, 0, 1]:
+                for o2 in [-1, 0, 1]:
+                    for o1 in [-1, 0, 1]:
+                        if o3 == o2 == o1 == 0:
+                            continue
+                        offsets = (o3, o2, o1)
+                        tasks[actor].extend(
+                            ray.get(actor.update_ghost.remote(offsets)))
+
+        tasks = {actor: task for actor, task in tasks.items() if task}
+        while tasks:
+            print("remaining tasks:", len(tasks))
+            for actor, task in tasks.items():
+                tasks[actor] = ray.get(actor.wait_ghost.remote(task))
+            tasks = {actor: task for actor, task in tasks.items() if task}
+
+    def refine_actor(self, point: Tuple[int, int, int], node=None) -> None:
+        """Refine the block where the specified point locates."""
+        node = root.find_node(point)
+        self.refine_actor_chain(node, root, actors)
+        self.update_neighbors_all()
+
+    def merge_actor(self, point: Tuple[int, int, int]) -> None:
+        """Merge the block where the specified point locates."""
+        node = root.find_node(point)
+        parent = node.parent
+
+        if (parent.size.nx3 != node.size.nx3 or
+            parent.size.nx2 != node.size.nx2 or
+                parent.size.nx1 != node.size.nx1):
+            return
+
+        mergeable = True
+
+        for child in parent.children:
+            if len(child.children) > 0:
+                mergeable = False
+                break
+            mergeable = mergeable and self.check_mergeability(child)
+
+        if mergeable:
+            merge_actor_chain(node, root, actors)
+            self.update_neighbors_all()
+
+    def check_mergeability(self, node: me.BlockTree) -> bool:
+        """Check whether the block can be merged."""
+        mergeable = True
+        logicloc = node.lx3, node.lx2, node.lx1
+        coord = ray.get(self.actors[logicloc].get_coord.remote())
+        for i in [-1, 0, 1]:
+            for j in [-1, 0, 1]:
+                for k in [-1, 0, 1]:
+                    if i == 0 and j == 0 and k == 0:
+                        continue
+                    offset = (i, j, k)
+                    neighbors = node.find_neighbors(offset, coord)
+                    for nb in neighbors:
+                        if nb is not None and nb.level - node.level >= 1:
+                            mergeable = mergeable and check_mergeability(
+                                nb, self.root, self.actors)
+        return mergeable
 
 def orchestrate_actor(actors: Dict[Tuple[int, int, int], ObjectRef],
                       root: me.BlockTree) -> None:
@@ -65,14 +143,6 @@ def orchestrate_actor(actors: Dict[Tuple[int, int, int], ObjectRef],
     update_ghosts_all(actors)
     for _, actor in actors.items():
         actor.reset_status.remote()
-
-
-def refine_actor(point: Tuple[int, int, int], root: me.BlockTree,
-                 actors: Dict[Tuple[int, int, int], ObjectRef], node=None) -> None:
-    """Refine the block where the specified point locates."""
-    node = root.find_node(point)
-    refine_actor_chain(node, root, actors)
-    update_neighbors_all(actors, root)
 
 
 def refine_actor_chain(node: me.BlockTree, root: me.BlockTree,
@@ -119,49 +189,6 @@ def refine_actor_chain(node: me.BlockTree, root: me.BlockTree,
     actors.update(new_actors)
 
 
-def merge_actor(point: Tuple[int, int, int], root: me.BlockTree,
-                actors: Dict[Tuple[int, int, int], ObjectRef]) -> None:
-    """Merge the block where the specified point locates."""
-    node = root.find_node(point)
-    parent = node.parent
-
-    if (parent.size.nx3 != node.size.nx3 or
-        parent.size.nx2 != node.size.nx2 or
-            parent.size.nx1 != node.size.nx1):
-        return
-
-    mergeable = True
-
-    for child in parent.children:
-        if len(child.children) > 0:
-            mergeable = False
-            break
-        mergeable = mergeable and check_mergeability(child, root, actors)
-
-    if mergeable:
-        merge_actor_chain(node, root, actors)
-        update_neighbors_all(actors, root)
-
-
-def check_mergeability(node: me.BlockTree, root: me.BlockTree,
-                       actors: Dict[Tuple[int, int, int], ObjectRef]) -> bool:
-    """Check whether the block can be merged."""
-    mergeable = True
-    logicloc = node.lx3, node.lx2, node.lx1
-    coord = ray.get(actors[logicloc].get_coord.remote())
-    for i in [-1, 0, 1]:
-        for j in [-1, 0, 1]:
-            for k in [-1, 0, 1]:
-                if i == 0 and j == 0 and k == 0:
-                    continue
-                offset = (i, j, k)
-                neighbors = node.find_neighbors(offset, coord)
-                for nb in neighbors:
-                    if nb is not None and nb.level - node.level >= 1:
-                        mergeable = mergeable and check_mergeability(
-                            nb, root, actors)
-    return mergeable
-
 
 def merge_actor_chain(node: me.BlockTree, root: me.BlockTree,
                       actors: Dict[Tuple[int, int, int], ObjectRef]) -> None:
@@ -207,41 +234,6 @@ def merge_actor_chain(node: me.BlockTree, root: me.BlockTree,
 
         actors.update(new_actors)
 
-
-def update_neighbors_all(actors: Dict[Tuple[int, int, int], ObjectRef],
-                         root: me.BlockTree) -> None:
-    """Update neighbors for all actors."""
-    for _, actor in actors.items():
-        for o3 in [-1, 0, 1]:
-            for o2 in [-1, 0, 1]:
-                for o1 in [-1, 0, 1]:
-                    if o3 == o2 == o1 == 0:
-                        continue
-                    offsets = (o3, o2, o1)
-                    actor.update_neighbor.remote(offsets, root, actors)
-
-
-def update_ghosts_all(actors: Dict[Tuple[int, int, int], ObjectRef]) -> None:
-    """Update ghost cells for all actors."""
-    tasks = {}
-
-    for actor in actors.values():
-        tasks[actor] = []
-        for o3 in [-1, 0, 1]:
-            for o2 in [-1, 0, 1]:
-                for o1 in [-1, 0, 1]:
-                    if o3 == o2 == o1 == 0:
-                        continue
-                    offsets = (o3, o2, o1)
-                    tasks[actor].extend(
-                        ray.get(actor.update_ghost.remote(offsets)))
-
-    tasks = {actor: task for actor, task in tasks.items() if task}
-    while tasks:
-        print("remaining tasks:", len(tasks))
-        for actor, task in tasks.items():
-            tasks[actor] = ray.get(actor.wait_ghost.remote(task))
-        tasks = {actor: task for actor, task in tasks.items() if task}
 
 
 def print_actors(actors: Dict[Tuple[int, int, int], ObjectRef]) -> None:
