@@ -34,6 +34,18 @@ class MeshManager:
         """Run one step of the simulation."""
         tasks = [actor.work.remote() for actor in self.actors.values()]
         results = ray.get(tasks)
+
+        '''
+        for logicloc, refine_code in zip(self.actors.keys(), results):
+            if refine_code == 1:
+                print("Refine actor:", logicloc)
+                self.refine_actor(logicloc, self.root, self.actors)
+            elif refine_code == -1:
+                print("Merge actor:", logicloc)
+                self.merge_actor(logicloc)
+            else:
+        '''
+
         self.update_ghosts_all()
         print("Results:", results)
 
