@@ -18,9 +18,9 @@ if __name__ == '__main__':
     root.create_tree()
 
     mesh = mg.MeshManager(root)
-    mg.print_actors(mesh.actors)
+    #mg.print_actors(mesh.actors)
 
     mesh.run_one_step()
 
     print("after run one step...")
-    mg.print_actors(mesh.actors)
+    #mg.print_actors(mesh.actors)
