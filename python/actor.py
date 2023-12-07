@@ -9,6 +9,7 @@ import ray
 from ray import ObjectRef
 import numpy as np
 import mesh as me
+import random
 
 
 def check_neighbor_ready(func):
@@ -29,7 +30,7 @@ def check_neighbor_ready(func):
     return wrapper
 
 
-def diffusion_kernel_2d(arr):
+def diffusion_2d(arr):
     return arr[1:-1,:-2] + arr[1:-1,2:] + arr[2:,1:-1] + arr[:-2,1:-1] - 4. * arr[1:-1,1:-1]
 
 @ray.remote(num_cpus=1)
@@ -64,7 +65,7 @@ class MeshBlockActor:
         """Reset the status of the mesh block."""
         self.mblock.is_ready = False
 
-    def work(self) -> None:
+    def work(self) -> int:
         """Update the interior of the mesh block."""
         start_time = time.time()
 
@@ -85,38 +86,46 @@ class MeshBlockActor:
         thresholds = (0.2, 0.8)  # coarsen, refine
         return self.check_refine(*thresholds)
 
-        point = self.mblock.size.center()
-        x = np.random.rand(1)
-        if x[0] < thresholds[0]:
-            return -1, point  # coarsen
-        # if x[0] > thresholds[1]:
-        #    return 1, point  # refine
-        return 0, point
-
     def run_stencil(self, kernel_func = diffusion_2d) -> None:
         """Calculate stencil for interior block."""
         if not self.mblock.is_ready:
             raise ValueError("interior matrix is not ready")
 
-        diffusivity = 0.01
-        iter_time = 100000
+        level = floor(log2(self.logicloc[2]))
+
+        diffusivity = min(0.0000001 * (2 ** level), 1.)
+        iter_time = 10000 * level
         key = (0,0,0)
 
-        for i in range(iter_times):
+        for n in range(iter_times):
             self.ghost[key] += diffusivity * kernel_func(self.mblock.data)
+
+        #for n in range(10):
+        #    i = random.randint(0, self.mblock.size.nx1)
+        #    j = random.randint(0, self.mblock.size.nx2)
+        #    self.ghost[key][i,j] += np.random.normal(0, 10.) / level
 
     def check_refine(low: float, high: float) -> int:
         key = (0,0,0)
 
         ddx = abs(self.mblock.data[1:-1,1:] - self.mblock.data[1:-1,:-1])
         dx = self.mblock.coord.x1v[1] - self.mblock.coord.x1v[0]
-        ddx_min, ddx_max = ddx.min() / dx, ddx.max() 
+        ddx_min, ddx_max = ddx.min() / dx, ddx.max() / dx
 
-        if ddx > high:
+        if ddx_max > high:
             return 1
 
-        ddx = abs(self.mblock.data[1:-1,1:] - self.mblock.data[1:-1,:-1])
-        ddx_min, ddx_max = ddx.min(), ddx.max()
+        ddy = abs(self.mblock.data[1:,1:-1] - self.mblock.data[:-1,1:-1])
+        dy = self.mblock.coord.x2v[1] - self.mblock.coord.x2v[0]
+        ddy_min, ddy_max = ddy.min() / dy, ddy.max() / dy
+
+        if ddy_max > high:
+            return 1
+
+        if ddx_min < low and ddy_min < low:
+            return -1
+
+        return 0
 
     def put_data(self):
         """Put the mesh block in Plasma store."""

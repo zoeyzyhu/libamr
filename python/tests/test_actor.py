@@ -65,7 +65,7 @@ def test_update_ghosts_all(actors):
 
 if __name__ == '__main__':
     # Initial split without refinement
-    size = me.RegionSize(x1dim=(0, 240., 8), x2dim=(0, 120., 4))
+    size = me.RegionSize(x1dim=(0, 8., 8), x2dim=(0, 4., 4))
     me.BlockTree.set_block_size(nx1=2, nx2=2, nx3=1)
     root = me.BlockTree(size)
     root.create_tree()
@@ -78,18 +78,18 @@ if __name__ == '__main__':
 
    
     # Refine an actor based on a point
-    point_to_refine1 = (0, 29, 44)
-    node = root.find_node(point_to_refine1)
-    mg.print_actor_coord(point_to_refine1, root, actors)
-    mg.refine_actor(point_to_refine1, root, actors)
-    mg.print_actor_children(node, actors)
+    #point_to_refine1 = (0, 29, 44)
+    #node = root.find_node(point_to_refine1)
+    #mg.print_actor_coord(point_to_refine1, root, actors)
+    #mg.refine_actor(point_to_refine1, root, actors)
+    #mg.print_actor_children(node, actors)
 
     # Refine a refined block
-    point_to_refine2 = (0, 40, 44)
-    node = root.find_node(point_to_refine2)
-    mg.print_actor_coord(point_to_refine2, root, actors)
-    mg.refine_actor(point_to_refine2, root, actors)
-    mg.print_actor_children(node, actors)
+    #point_to_refine2 = (0, 40, 44)
+    #node = root.find_node(point_to_refine2)
+    #mg.print_actor_coord(point_to_refine2, root, actors)
+    #mg.refine_actor(point_to_refine2, root, actors)
+    #mg.print_actor_children(node, actors)
     #root.print_tree()
 
     # merge the finest blocks
