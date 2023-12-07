@@ -29,6 +29,9 @@ def check_neighbor_ready(func):
     return wrapper
 
 
+def diffusion_kernel_2d(arr):
+    return arr[1:-1,:-2] + arr[1:-1,2:] + arr[2:,1:-1] + arr[:-2,1:-1] - 4. * arr[1:-1,1:-1]
+
 @ray.remote(num_cpus=1)
 class MeshBlockActor:
     """Remotely launch actors as mesh blocks."""
@@ -64,10 +67,8 @@ class MeshBlockActor:
     def work(self) -> None:
         """Update the interior of the mesh block."""
         start_time = time.time()
-        target_duration = 150  # seconds
 
-        while time.time() - start_time < target_duration:
-            self.run_stencil()
+        self.run_stencil()
 
         stime = datetime.fromtimestamp(
             start_time).strftime('%Y-%m-%d %H:%M:%S')
@@ -82,6 +83,8 @@ class MeshBlockActor:
             f.write(f"Duration: {duration} seconds\n")
 
         thresholds = (0.2, 0.8)  # coarsen, refine
+        return self.check_refine(*thresholds)
+
         point = self.mblock.size.center()
         x = np.random.rand(1)
         if x[0] < thresholds[0]:
@@ -90,21 +93,30 @@ class MeshBlockActor:
         #    return 1, point  # refine
         return 0, point
 
-    def run_stencil(self) -> None:
+    def run_stencil(self, kernel_func = diffusion_2d) -> None:
         """Calculate stencil for interior block."""
         if not self.mblock.is_ready:
             raise ValueError("interior matrix is not ready")
 
-        for row in range(self.mblock.size.nghost,
-                         self.mblock.size.nghost + self.mblock.size.nx1):
-            for col in range(self.mblock.size.nghost,
-                             self.mblock.size.nghost + self.mblock.size.nx2):
-                self.mblock.data[:, col, row] = \
-                    self.mblock.data[:, col, row + 1] \
-                    + self.mblock.data[:, col, row - 1] \
-                    + self.mblock.data[:, col + 1, row] \
-                    + self.mblock.data[:, col - 1, row] \
-                    - 4 * self.mblock.data[:, col, row]
+        diffusivity = 0.01
+        iter_time = 100000
+        key = (0,0,0)
+
+        for i in range(iter_times):
+            self.ghost[key] += diffusivity * kernel_func(self.mblock.data)
+
+    def check_refine(low: float, high: float) -> int:
+        key = (0,0,0)
+
+        ddx = abs(self.mblock.data[1:-1,1:] - self.mblock.data[1:-1,:-1])
+        dx = self.mblock.coord.x1v[1] - self.mblock.coord.x1v[0]
+        ddx_min, ddx_max = ddx.min() / dx, ddx.max() 
+
+        if ddx > high:
+            return 1
+
+        ddx = abs(self.mblock.data[1:-1,1:] - self.mblock.data[1:-1,:-1])
+        ddx_min, ddx_max = ddx.min(), ddx.max()
 
     def put_data(self):
         """Put the mesh block in Plasma store."""

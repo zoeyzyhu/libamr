@@ -65,7 +65,7 @@ def test_update_ghosts_all(actors):
 
 if __name__ == '__main__':
     # Initial split without refinement
-    size = me.RegionSize(x1dim=(0, 120., 8), x2dim=(0, 120., 4))
+    size = me.RegionSize(x1dim=(0, 240., 8), x2dim=(0, 120., 4))
     me.BlockTree.set_block_size(nx1=2, nx2=2, nx3=1)
     root = me.BlockTree(size)
     root.create_tree()
