@@ -78,7 +78,7 @@ class MeshBlockActor:
             f.write(f"End time: {etime}\n")
             f.write(f"Duration: {duration} seconds\n")
 
-        thresholds = (0.2, 0.8)  # coarsen, refine
+        thresholds = (1.4, 1.5)  # coarsen, refine
         return self.check_refine(*thresholds)
 
     def run_stencil(self) -> None:
@@ -93,7 +93,7 @@ class MeshBlockActor:
 
         level = floor(log2(self.logicloc[2]))
 
-        diffusivity = min(0.00001 * (10 ** level), 1.)
+        diffusivity = min(0.000001 * (10 ** level), 1.)
         iter_times = 1000 * level
         key = (0,0,0)
 

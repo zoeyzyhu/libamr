@@ -22,7 +22,7 @@ if __name__ == '__main__':
 
     for i in range(100):
         print(f"===== Step {i} =====")
-        mesh.run_one_step()
+        mesh.run_one_step(amr = True)
 
-    #mg.print_actors(mesh.actors)
+    mg.print_actors(mesh.actors)
     print("after run one step...")

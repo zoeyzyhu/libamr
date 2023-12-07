@@ -30,24 +30,24 @@ class MeshManager:
         self.update_neighbors_all()
         self.update_ghosts_all()
 
-    def run_one_step(self) -> None:
+    def run_one_step(self, amr = False) -> None:
         """Run one step of the simulation."""
         tasks = [actor.work.remote() for actor in self.actors.values()]
         results = ray.get(tasks)
 
-        keys = [key for key in self.actors.keys()]
-
-        for logicloc, refine_code in zip(keys, results):
-            if refine_code == 1:
-                print("Refine actor:", logicloc)
-                self.refine_actor(logicloc)
-                print("actors = ", len(self.actors))
-            elif refine_code == -1:
-                print("Merge actor:", logicloc)
-                self.merge_actor(logicloc)
-                print("actors = ", len(self.actors))
-            else:
-                print("No action.")
+        if amr:
+            keys = [key for key in self.actors.keys()]
+            for logicloc, refine_code in zip(keys, results):
+                if refine_code == 1:
+                    print("Refine actor:", logicloc)
+                    self.refine_actor(logicloc)
+                    print("actors = ", len(self.actors))
+                elif refine_code == -1:
+                    print("Merge actor:", logicloc)
+                    self.merge_actor(logicloc)
+                    print("actors = ", len(self.actors))
+                else:
+                    print("No action.")
 
         self.update_ghosts_all()
         print("Results:", results)
