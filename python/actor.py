@@ -28,7 +28,7 @@ def check_neighbor_ready(func):
 
     return wrapper
 
-@ray.remote(num_cpus=1)
+@ray.remote(num_cpus=0.1)
 class MeshBlockActor:
     """Remotely launch actors as mesh blocks."""
 

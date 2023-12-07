@@ -170,12 +170,13 @@ class BlockTree:
 
         return None
 
-    def find_node_by_logicloc(self, logicloc: (int, int, int)) -> Optional[Self]:
+    def find_node_by_logicloc(self, logicloc: (int, int, int), level = None) -> Optional[Self]:
         """Find the block that has the logic location."""
         if logicloc == (self.lx3, self.lx2, self.lx1):
             return self
 
-        level = floor(log2(logicloc[2]))
+        if level is None:
+            level = floor(log2(logicloc[2]))
         if level == 0:
             return None
 
@@ -185,10 +186,7 @@ class BlockTree:
 
         for child in self.children:
             if child.lx1 == lx1 and child.lx2 == lx2 and child.lx3 == lx3:
-                lx3 = logicloc[0] >> 1
-                lx2 = logicloc[1] >> 1
-                lx1 = logicloc[2] >> 1
-                return child.find_node_by_logicloc((lx3, lx2, lx1))
+                return child.find_node_by_logicloc(logicloc, level - 1)
 
         return None
 

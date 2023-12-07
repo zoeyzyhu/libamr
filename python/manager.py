@@ -35,16 +35,19 @@ class MeshManager:
         tasks = [actor.work.remote() for actor in self.actors.values()]
         results = ray.get(tasks)
 
-        '''
-        for logicloc, refine_code in zip(self.actors.keys(), results):
+        keys = [key for key in self.actors.keys()]
+
+        for logicloc, refine_code in zip(keys, results):
             if refine_code == 1:
                 print("Refine actor:", logicloc)
-                self.refine_actor(logicloc, self.root, self.actors)
+                self.refine_actor(logicloc)
+                print("actors = ", len(self.actors))
             elif refine_code == -1:
                 print("Merge actor:", logicloc)
                 self.merge_actor(logicloc)
+                print("actors = ", len(self.actors))
             else:
-        '''
+                print("No action.")
 
         self.update_ghosts_all()
         print("Results:", results)
@@ -82,15 +85,56 @@ class MeshManager:
                 tasks[actor] = ray.get(actor.wait_ghost.remote(task))
             tasks = {actor: task for actor, task in tasks.items() if task}
 
-    def refine_actor(self, point: Tuple[int, int, int], node=None) -> None:
+    def refine_actor(self, logicloc: Tuple[int, int, int], node=None) -> None:
         """Refine the block where the specified point locates."""
-        node = root.find_node(point)
-        self.refine_actor_chain(node, root, actors)
+        node = self.root.find_node_by_logicloc(logicloc)
+        self.refine_actor_chain(node)
         self.update_neighbors_all()
 
-    def merge_actor(self, point: Tuple[int, int, int]) -> None:
+    def refine_actor_chain(self, node: me.BlockTree) -> None:
+        """Refine the block where the specified point locates."""
+        # Launch chidlren actors
+        logicloc = node.lx3, node.lx2, node.lx1
+        node.split()
+        new_actors = launch_actors(node)
+        parent = self.actors[logicloc]
+
+        old_avg = ray.get(parent.get_avg.remote())
+        # For each child actor, fill in the interior data
+        tasks = []
+        for new_actor in new_actors.values():
+            new_actor.fill_interior_data.remote(parent)
+            tasks.append(new_actor.get_avg.remote())
+
+        new_avg = sum(ray.get(tasks)) / len(new_actors)
+
+        for new_actor in new_actors.values():
+            new_actor.fix_interior_data.remote(old_avg - new_avg)
+
+        tasks = [new_actor.get_avg.remote() for new_actor in new_actors.values()]
+        new_avg = sum(ray.get(tasks)) / len(new_actors)
+
+        # Check whether neighbors need to be refined
+        coord = ray.get(self.actors[logicloc].get_coord.remote())
+        for i in [-1, 0, 1]:
+            for j in [-1, 0, 1]:
+                for k in [-1, 0, 1]:
+                    if i == 0 and j == 0 and k == 0:
+                        continue
+                    offset = (i, j, k)
+                    neighbors = node.find_neighbors(offset, coord)
+                    for nb in neighbors:
+                        if nb is not None and nb.level - node.level < 0:
+                            self.refine_actor_chain(nb)
+
+        # Kill the parent actor, update the actors dict
+        ray.kill(parent)
+        self.actors.pop(logicloc)
+        self.actors.update(new_actors)
+
+    def merge_actor(self, logicloc: Tuple[int, int, int]) -> None:
         """Merge the block where the specified point locates."""
-        node = root.find_node(point)
+        node = self.root.find_node_by_logicloc(logicloc)
         parent = node.parent
 
         if (parent.size.nx3 != node.size.nx3 or
@@ -98,21 +142,17 @@ class MeshManager:
                 parent.size.nx1 != node.size.nx1):
             return
 
-        mergeable = True
-
         for child in parent.children:
             if len(child.children) > 0:
-                mergeable = False
-                break
-            mergeable = mergeable and self.check_mergeability(child)
+                return
+            if not self.check_mergeability(child):
+                return
 
-        if mergeable:
-            merge_actor_chain(node, root, actors)
-            self.update_neighbors_all()
+        self.merge_actor_chain(node)
+        self.update_neighbors_all()
 
     def check_mergeability(self, node: me.BlockTree) -> bool:
         """Check whether the block can be merged."""
-        mergeable = True
         logicloc = node.lx3, node.lx2, node.lx1
         coord = ray.get(self.actors[logicloc].get_coord.remote())
         for i in [-1, 0, 1]:
@@ -124,9 +164,9 @@ class MeshManager:
                     neighbors = node.find_neighbors(offset, coord)
                     for nb in neighbors:
                         if nb is not None and nb.level - node.level >= 1:
-                            mergeable = mergeable and check_mergeability(
-                                nb, self.root, self.actors)
-        return mergeable
+                            if not check_mergeability(nb, self.root, self.actors):
+                                return False
+        return True
 
 def orchestrate_actor(actors: Dict[Tuple[int, int, int], ObjectRef],
                       root: me.BlockTree) -> None:
@@ -155,51 +195,6 @@ def orchestrate_actor(actors: Dict[Tuple[int, int, int], ObjectRef],
     update_ghosts_all(actors)
     for _, actor in actors.items():
         actor.reset_status.remote()
-
-
-def refine_actor_chain(node: me.BlockTree, root: me.BlockTree,
-                       actors: Dict[Tuple[int, int, int], ObjectRef]) -> None:
-    """Refine the block where the specified point locates."""
-    # Launch chidlren actors
-    node.split()
-    new_actors = launch_actors(node)
-
-    logicloc = node.lx3, node.lx2, node.lx1
-    parent = actors[logicloc]
-    old_avg = ray.get(parent.get_avg.remote())
-
-    # For each child actor, fill in the interior data
-    tasks = []
-    for new_actor in new_actors.values():
-        new_actor.fill_interior_data.remote(parent)
-        tasks.append(new_actor.get_avg.remote())
-
-    new_avg = sum(ray.get(tasks)) / len(new_actors)
-
-    for new_actor in new_actors.values():
-        new_actor.fix_interior_data.remote(old_avg - new_avg)
-
-    tasks = [new_actor.get_avg.remote() for new_actor in new_actors.values()]
-    new_avg = sum(ray.get(tasks)) / len(new_actors)
-
-    # Check whether neighbors need to be refined
-    coord = ray.get(actors[logicloc].get_coord.remote())
-    for i in [-1, 0, 1]:
-        for j in [-1, 0, 1]:
-            for k in [-1, 0, 1]:
-                if i == 0 and j == 0 and k == 0:
-                    continue
-                offset = (i, j, k)
-                neighbors = node.find_neighbors(offset, coord)
-                for nb in neighbors:
-                    if nb is not None and nb.level - node.level < 0:
-                        refine_actor_chain(nb, root, actors)
-
-    # Kill the parent actor, update the actors dict
-    ray.kill(parent)
-    actors.pop(logicloc)
-    actors.update(new_actors)
-
 
 
 def merge_actor_chain(node: me.BlockTree, root: me.BlockTree,
@@ -245,7 +240,6 @@ def merge_actor_chain(node: me.BlockTree, root: me.BlockTree,
             actors.pop(logicloc)
 
         actors.update(new_actors)
-
 
 
 def print_actors(actors: Dict[Tuple[int, int, int], ObjectRef]) -> None:
