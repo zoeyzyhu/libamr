@@ -22,5 +22,5 @@ if __name__ == '__main__':
 
     mesh.run_one_step()
 
-    print("after run one step...")
     #mg.print_actors(mesh.actors)
+    print("after run one step...")
