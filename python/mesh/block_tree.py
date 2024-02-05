@@ -84,7 +84,8 @@ class BlockTree:
     def split(self) -> None:
         """Split the block into 8 sub-blocks."""
         if len(self.children) > 0:
-            raise ValueError("This block is not a leaf, can not split it")
+            raise ValueError(
+                f"This block is not a leaf, can not split it: {self.lx3, self.lx2, self.lx1}")
 
         locbit1_range = [0, 1]
         locbit2_range = [0, 1] if self.size.nx2 > 1 else [0]
@@ -98,6 +99,7 @@ class BlockTree:
 
     def merge(self):
         """Merge children blocks into a parent block."""
+        self.children.clear()
 
     def divide_mesh(self) -> None:
         """Divide the block into 8 sub-blocks."""
@@ -168,12 +170,13 @@ class BlockTree:
 
         return None
 
-    def find_node_by_logicloc(self, logicloc: (int, int, int)) -> Optional[Self]:
+    def find_node_by_logicloc(self, logicloc: (int, int, int), level = None) -> Optional[Self]:
         """Find the block that has the logic location."""
         if logicloc == (self.lx3, self.lx2, self.lx1):
             return self
 
-        level = floor(log2(logicloc[2]))
+        if level is None:
+            level = floor(log2(logicloc[2]))
         if level == 0:
             return None
 
@@ -183,10 +186,7 @@ class BlockTree:
 
         for child in self.children:
             if child.lx1 == lx1 and child.lx2 == lx2 and child.lx3 == lx3:
-                lx3 = logicloc[0] >> 1
-                lx2 = logicloc[1] >> 1
-                lx1 = logicloc[2] >> 1
-                return child.find_node_by_logicloc((lx3, lx2, lx1))
+                return child.find_node_by_logicloc(logicloc, level - 1)
 
         return None
 
@@ -219,3 +219,12 @@ class BlockTree:
                f"lx2={str(bin(self.lx2))[2:]}, " + \
                f"lx1={str(bin(self.lx1))[2:]}\n" + \
                f"size={self.size}\nchildren={self.children}"
+
+    def __eq__(self, other) -> bool:
+        """Check if two BlockTree instances are equal."""
+        if isinstance(other, BlockTree):
+            return self.size == other.size and \
+                self.lx1 == other.lx1 and self.lx2 == other.lx2 and \
+                self.lx3 == other.lx3 and self.level == other.level and \
+                self.children == other.children
+        return False

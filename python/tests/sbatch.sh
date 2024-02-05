@@ -6,7 +6,7 @@
 #SBATCH --time=00:05:00
 #SBATCH --account=eecs587f23_class
 #SBATCH --partition=standard
-#SBATCH --output=testr.log
+#SBATCH --output=log/testr.log
 #SBATCH --nodes=3
 ### Necessary to prevent 2 users bind IP and port for
 ### Ray head node on the same slurm node
@@ -37,8 +37,8 @@ if [[ "$ip" == *" "* ]]; then
 fi
 
 # Set IP and port for the head node
-port=6379 # a common port number used for Redis
-ip_head=$ip:$port
+head_node_port=6379 # a common port number used for Redis
+ip_head=$head_node_ip:$head_node_port
 export ip_head
 echo "IP Head: $ip_head"
 
@@ -46,7 +46,8 @@ echo "IP Head: $ip_head"
 echo "Starting HEAD at $head_node"
 srun --nodes=1 --ntasks=1 -w "$head_node" \
     ray start --head --node-ip-address="$head_node_ip" \
-    --port=$port --block &
+    --port=$head_node_port --block \
+    --dashboard-host 0.0.0.0 --dashboard-port 8265 &
 
 # Optional; may be useful in Ray versions < 1.0.
 sleep 10
@@ -76,9 +77,20 @@ done
 # ===== Run test code below =====
 
 cd ~/libamr/python/tests/
-log_file="log_actor_1203.txt"
+file_to_test="test_actor.py"
+test_focus="merge"
+current_date=$(date +"%y%m%d")
 current_time=$(date +"%T")
 
-echo -e "\n\n\n\n======================= Time to start this test: $current_time =======================" >> "$log_file"
+file_name="${file_to_test%.*}"
+log_file="log/${file_name}_${current_date}_${test_focus}.txt"
+test_description="
+    Test whether merge runs ok on cluster.
+    Test load balance.
+"
 
+separator="\n\n\n\n\n===================================================================================================="
+echo -e "$separator" >> "$log_file"
+echo -e "Test started at: $current_time\n" >> "$log_file"
+echo -e $test_description >> "$log_file"
 python test_actor.py >> "$log_file"

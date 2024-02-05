@@ -1,10 +1,13 @@
 
+import os
+os.environ['RAY_SCHEDULER_SPREAD_THRESHOLD'] = '0.0001'
 import sys
 import ray
 sys.path.append('../')
 import mesh as me
 import actor as ac
 import manager as mg
+
 
 def test_launch_actors(tree):
     print("\n===== Test launch actors =====")
@@ -62,20 +65,38 @@ def test_update_ghosts_all(actors):
 
 if __name__ == '__main__':
     # Initial split without refinement
-    size = me.RegionSize(x1dim=(0, 120., 8), x2dim=(0, 120., 4))
+    size = me.RegionSize(x1dim=(0, 8., 8), x2dim=(0, 4., 4))
     me.BlockTree.set_block_size(nx1=2, nx2=2, nx3=1)
     root = me.BlockTree(size)
     root.create_tree()
-    #root.print_tree()
 
     # Launch actors based on the tree
-    ray.init(runtime_env={"py_modules": [me]},
-             num_cpus=4)
+    ray.init(runtime_env={"py_modules": [me]})
     actors = mg.launch_actors(root)
-
+    mg.update_neighbors_all(actors, root)
+    mg.update_ghosts_all(actors)
+    mg.print_actors(actors)
+   
     # Refine an actor based on a point
-    point_to_refine = (0, 29, 44)
-    mg.refine_actor(point_to_refine, root, actors)
+    #point_to_refine1 = (0, 29, 44)
+    #node = root.find_node(point_to_refine1)
+    #mg.print_actor_coord(point_to_refine1, root, actors)
+    #mg.refine_actor(point_to_refine1, root, actors)
+    #mg.print_actor_children(node, actors)
 
-    # Update ghost zones of all blocks
-    test_update_ghosts_all(actors)
+    # Refine a refined block
+    #point_to_refine2 = (0, 40, 44)
+    #node = root.find_node(point_to_refine2)
+    #mg.print_actor_coord(point_to_refine2, root, actors)
+    #mg.refine_actor(point_to_refine2, root, actors)
+    #mg.print_actor_children(node, actors)
+    #root.print_tree()
+
+    # merge the finest blocks
+    #point_to_merge = (0, 40, 44)
+    #mg.merge_actor(point_to_merge, root, actors)
+    #mg.print_actor_coord(point_to_merge, root, actors)
+
+    #mg.orchestrate_actor(actors, root)
+    #print("\n===== After orchestrate actors: Tree =====")
+    #root.print_tree()

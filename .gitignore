@@ -104,3 +104,8 @@ z.junk
 # Logs
 *log*
 
+# Timeline & data
+time_to_*
+timeline*.json
+data*.txt
+make_plots*

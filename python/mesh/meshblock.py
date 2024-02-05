@@ -46,7 +46,6 @@ class MeshBlock:
                 for o1 in [-1, 0, 1]:
                     self.create_strided_view(o3, o2, o1, is_ghost=True)
 
-        self.is_ready = True
         return self
 
     def create_strided_view(self, o3, o2, o1, is_ghost):
@@ -77,12 +76,20 @@ class MeshBlock:
             writeable=is_ghost
         )
 
-    def fill_random(self) -> Self:
+    def fill_random(self, seed) -> Self:
         """Fill interior zones with random values."""
-        self.data.fill(-1)
-        # np.random.seed(seed) # remove me after testing
+        self.data.fill(0)
+        np.random.seed(seed)  # remove me after testing
         self.ghost[(0, 0, 0)][:] = np.random.uniform(0, 1, size=(
             self.size.nx3, self.size.nx2, self.size.nx1, self.size.nvar))
+        self.is_ready = True
+        return self
+
+    def fill_data(self, data) -> Self:
+        """Fill interior zones with random values."""
+        self.data.fill(-1)
+        self.ghost[(0, 0, 0)][:] = data
+        self.is_ready = True
         return self
 
     def prolongated_view(self, my_offsets: (int, int, int),
